@@ -22,8 +22,9 @@ services:
         value: gpt-image-1.5
       - key: OPENAI_IMAGE_SIZE
         value: 1536x1024
-      # Qualidade da imagem: low | medium | high (high = ~$0.20/geração).
+      # Qualidade da imagem: low | medium | high.
+      # medium ≈ $0.05/geração · high ≈ $0.20 · low ≈ $0.013.
       - key: OPENAI_IMAGE_QUALITY
-        value: high
+        value: medium
       - key: PANORAMA_EXPANSION
         value: ambient
