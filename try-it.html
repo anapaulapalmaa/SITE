@@ -597,18 +597,13 @@
   <script>
     AOS.init({ duration: 800, offset: 80, once: true });
 
-    // API base: local dev hits the local backend (relative); everywhere else
-    // (arch3.net, *.onrender.com, file://) hits the deployed backend on Render.
-    window.ARCH3_API_BASE =
-      (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-        ? ''
-        : 'https://arch3-site.onrender.com';
+    // Same-origin PHP backend (hospedado no próprio arch3.net / HostGator).
+    window.ARCH3_API_BASE = '';
 
-    // Confirm the backend is reachable (it sleeps on Render's free tier and may
-    // take ~50s to wake on the first request).
+    // Confirm the backend is reachable.
     (async () => {
       try {
-        const res = await fetch(window.ARCH3_API_BASE + '/api/health', { cache: 'no-store' });
+        const res = await fetch(window.ARCH3_API_BASE + '/api/health.php', { cache: 'no-store' });
         if (!res.ok) throw new Error('not ok');
         await res.json();
       } catch {
@@ -908,7 +903,7 @@
 
         let response;
         try {
-          response = await fetch(window.ARCH3_API_BASE + '/api/generate-redesign', { method: 'POST', body: formData });
+          response = await fetch(window.ARCH3_API_BASE + '/api/generate-redesign.php', { method: 'POST', body: formData });
         } catch {
           throw new Error('Could not reach the generator. It may be waking up — wait a moment and try again.');
         }
