@@ -442,9 +442,9 @@
 
   <!-- Backend reachability warning (shown only if /api/health fails) -->
   <div id="backendWarning" style="display:none; max-width:1100px; margin:16px auto 0; padding:12px 18px; border-radius:14px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.4); color:#fecaca; font-size:13.5px; line-height:1.6;">
-    ⚠️ <strong>Backend not detected on this address.</strong> Image generation won't work here.
-    Run <code style="background:rgba(255,255,255,0.1); padding:1px 6px; border-radius:6px;">npm start</code>
-    and open the app at <strong>http://localhost:3000/try-it</strong> — not Live Server (port 5500) or a <code style="background:rgba(255,255,255,0.1); padding:1px 6px; border-radius:6px;">file://</code> path.
+    ⚠️ <strong>The generator is waking up.</strong> The backend sleeps after inactivity and can take
+    up to ~1 minute to start. Wait a moment and click <strong>Generate</strong> again — if it keeps
+    failing, the service may be temporarily down.
   </div>
 
   <main class="page-shell">
@@ -597,10 +597,18 @@
   <script>
     AOS.init({ duration: 800, offset: 80, once: true });
 
-    // Confirm we're actually served by the Express backend (so /api works).
+    // API base: local dev hits the local backend (relative); everywhere else
+    // (arch3.net, *.onrender.com, file://) hits the deployed backend on Render.
+    window.ARCH3_API_BASE =
+      (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+        ? ''
+        : 'https://arch3-site.onrender.com';
+
+    // Confirm the backend is reachable (it sleeps on Render's free tier and may
+    // take ~50s to wake on the first request).
     (async () => {
       try {
-        const res = await fetch('/api/health', { cache: 'no-store' });
+        const res = await fetch(window.ARCH3_API_BASE + '/api/health', { cache: 'no-store' });
         if (!res.ok) throw new Error('not ok');
         await res.json();
       } catch {
@@ -900,9 +908,9 @@
 
         let response;
         try {
-          response = await fetch('/api/generate-redesign', { method: 'POST', body: formData });
+          response = await fetch(window.ARCH3_API_BASE + '/api/generate-redesign', { method: 'POST', body: formData });
         } catch {
-          throw new Error('Could not reach the backend. Run "npm start" and open the app at http://localhost:3000 (not Live Server or a file:// path).');
+          throw new Error('Could not reach the generator. It may be waking up — wait a moment and try again.');
         }
 
         // Read as text first so an empty/non-JSON response gives a clear message
@@ -912,10 +920,10 @@
         if (raw) {
           try { payload = JSON.parse(raw); }
           catch {
-            throw new Error(`The server returned a non-JSON response (HTTP ${response.status}). Make sure you opened the app at http://localhost:3000 with the backend running — not Live Server (port 5500) or a file:// path.`);
+            throw new Error(`The generator returned an unexpected response (HTTP ${response.status}). It may be restarting — please try again in a moment.`);
           }
         } else {
-          throw new Error(`Empty response from the server (HTTP ${response.status}). The backend may not be running on this address. Use "npm start" and http://localhost:3000.`);
+          throw new Error(`The generator is waking up (HTTP ${response.status}). Please wait ~1 minute and click Generate again.`);
         }
         if (!response.ok) throw new Error(payload.error || `Generation failed (HTTP ${response.status}).`);
 
