@@ -9,3 +9,6 @@ IMAGEM AMBIENTE 360.jpg
 logos em png.png
 ChatGPT Image *.png
 .local/
+
+# Config local do Claude Code
+.claude/
