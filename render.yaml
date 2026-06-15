@@ -1,0 +1,29 @@
+# Render Blueprint — deploy Arch3 (landing + backend Try It) as one Node service.
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Como usar:
+#   1. Suba este repositório para o GitHub.
+#   2. No Render: New + → Blueprint → conecte o repo. Ele lê este arquivo.
+#   3. Defina OPENAI_API_KEY no painel (é secret, não fica no repositório).
+services:
+  - type: web
+    name: arch3-site
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # Secret — preencha no painel do Render (NUNCA commitar a chave).
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_IMAGE_MODEL
+        value: gpt-image-1.5
+      - key: OPENAI_IMAGE_SIZE
+        value: 1536x1024
+      # Qualidade da imagem: low | medium | high (high = ~$0.20/geração).
+      - key: OPENAI_IMAGE_QUALITY
+        value: high
+      - key: PANORAMA_EXPANSION
+        value: ambient

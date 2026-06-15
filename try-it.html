@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Try Arch3 — Redesign your space in 360°</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Playfair Display (serif) + Inter (sans) + Allura (script) -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Allura&display=swap" rel="stylesheet">
+
+  <!-- AOS animations -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css">
+
+  <!-- Photo Sphere Viewer (360° panorama) + gyroscope plugin -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core@5/index.min.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+        "@photo-sphere-viewer/core": "https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core@5/index.module.js",
+        "@photo-sphere-viewer/gyroscope-plugin": "https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/gyroscope-plugin@5/index.module.js"
+      }
+    }
+  </script>
+
+  <style>
+    * { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    h1, h2, h3, h4 { font-family: 'Playfair Display', serif; }
+
+    :root {
+      --bg-deep: #050712;
+      --bg-soft: #0B0D22;
+      --text-primary: #F8FAFC;
+      --text-muted: #94A3B8;
+      --text-soft: #CBD5E1;
+      --accent-purple: #A78BFA;
+      --accent-purple-strong: #A855F7;
+      --accent-blue: #3B82F6;
+      --line-soft: rgba(148, 163, 184, 0.16);
+      --line-strong: rgba(139, 92, 246, 0.35);
+      --glass-card: rgba(15, 18, 42, 0.72);
+      --glass-strong: rgba(15, 18, 42, 0.86);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    html, body { background: var(--bg-deep); }
+    body {
+      background:
+        radial-gradient(circle at 15% 10%, rgba(139, 92, 246, 0.22), transparent 35%),
+        radial-gradient(circle at 85% 20%, rgba(59, 130, 246, 0.18), transparent 32%),
+        radial-gradient(circle at 50% 70%, rgba(168, 85, 247, 0.10), transparent 42%),
+        var(--bg-deep);
+      color: var(--text-primary);
+      background-attachment: fixed;
+      margin: 0;
+      min-height: 100vh;
+    }
+
+    .gradient-text {
+      background: linear-gradient(90deg, #8B5CF6, #3B82F6);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+
+    /* -------- Navbar — glass capsule with luminous border -------- */
+    .navbar {
+      position: sticky;
+      top: 16px;
+      z-index: 50;
+      max-width: 1120px;
+      width: calc(100% - 32px);
+      margin: 16px auto 0;
+      backdrop-filter: blur(20px);
+      background: rgba(10, 12, 30, 0.72);
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      border-radius: 9999px;
+      padding: 12px 24px;
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.35), 0 0 40px rgba(139, 92, 246, 0.15);
+      box-sizing: border-box;
+    }
+    .navbar-brand { display: flex; align-items: center; text-decoration: none; }
+    .navbar-logo-horizontal { height: 34px; width: auto; object-fit: contain; display: block; }
+    .navbar a { color: var(--text-soft); text-decoration: none; }
+    .navbar a:hover { color: #fff; }
+
+    /* -------- Buttons -------- */
+    .btn-primary {
+      background: linear-gradient(90deg, #8B5CF6, #3B82F6);
+      color: #fff;
+      padding: 12px 28px;
+      border-radius: 9999px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 28px rgba(139, 92, 246, 0.45);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 40px rgba(139, 92, 246, 0.6); }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .btn-secondary {
+      background: rgba(15, 18, 42, 0.6);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 9999px;
+      font-weight: 600;
+      border: 1px solid rgba(139, 92, 246, 0.35);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(14px);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-secondary:hover {
+      background: rgba(20, 24, 56, 0.7);
+      border-color: rgba(139, 92, 246, 0.6);
+      box-shadow: 0 0 24px rgba(139, 92, 246, 0.2);
+    }
+
+    /* -------- Badge -------- */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(15, 18, 42, 0.72);
+      border: 1px solid rgba(168, 85, 247, 0.28);
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #E2E8F0;
+      backdrop-filter: blur(16px);
+    }
+    .dot-pulse {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #A855F7;
+      box-shadow: 0 0 12px rgba(168, 85, 247, 0.7);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    /* -------- Page shell -------- */
+    .page-shell { max-width: 1100px; margin: 0 auto; padding: 64px 24px 96px; }
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent-purple);
+    }
+
+    /* -------- Glass cards -------- */
+    .glass-card {
+      background: var(--glass-card);
+      border: 1px solid var(--line-soft);
+      border-radius: 28px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+      padding: 28px;
+    }
+    .glass-card.is-glow {
+      border-color: var(--line-strong);
+      box-shadow: 0 24px 80px rgba(139, 92, 246, 0.16), 0 0 0 1px rgba(139, 92, 246, 0.15);
+    }
+
+    .tryit-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .field-label {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: #E2E8F0;
+      display: block;
+      margin-bottom: 8px;
+    }
+    .helper-text { color: var(--text-muted); font-size: 14px; line-height: 1.6; }
+
+    /* -------- Info / warning callout -------- */
+    .callout {
+      border-radius: 18px;
+      padding: 14px 16px;
+      font-size: 13.5px;
+      line-height: 1.6;
+      background: rgba(168, 85, 247, 0.10);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      color: var(--text-soft);
+    }
+    .callout strong { color: #fff; }
+
+    /* -------- Dropzone -------- */
+    .dropzone {
+      margin-top: 14px;
+      border-radius: 20px;
+      border: 1px dashed rgba(168, 85, 247, 0.4);
+      background: rgba(255, 255, 255, 0.03);
+      min-height: 200px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 22px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      position: relative;
+    }
+    .dropzone:hover, .dropzone.is-active {
+      border-color: rgba(168, 85, 247, 0.85);
+      background: rgba(168, 85, 247, 0.08);
+      box-shadow: inset 0 0 40px rgba(139, 92, 246, 0.12);
+    }
+    .dropzone-icon {
+      width: 46px; height: 46px;
+      border-radius: 14px;
+      display: grid; place-items: center;
+      margin: 0 auto 12px;
+      background: rgba(168, 85, 247, 0.16);
+      border: 1px solid rgba(168, 85, 247, 0.35);
+      font-size: 22px;
+    }
+    .dropzone h4 { font-family: 'Inter', sans-serif; font-size: 16px; margin: 0 0 6px; color: #fff; }
+    .dropzone-preview { width: 100%; }
+    .dropzone-preview img {
+      width: 100%;
+      max-height: 240px;
+      object-fit: cover;
+      border-radius: 14px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+      display: block;
+    }
+    .dropzone-filename { margin-top: 10px; font-size: 12.5px; color: var(--text-muted); word-break: break-all; }
+
+    textarea.prompt-input {
+      width: 100%;
+      min-height: 130px;
+      resize: vertical;
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(255, 255, 255, 0.06);
+      color: #fff;
+      padding: 14px 16px;
+      font: inherit;
+      line-height: 1.6;
+      outline: none;
+      box-sizing: border-box;
+    }
+    textarea.prompt-input::placeholder { color: rgba(203, 213, 225, 0.5); }
+    textarea.prompt-input:focus {
+      border-color: #8B5CF6;
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18);
+    }
+
+    .field-error { margin-top: 10px; color: #fca5a5; font-size: 13.5px; }
+
+    .messages-list { list-style: none; padding: 0; margin: 18px 0 0; display: grid; gap: 8px; }
+    .messages-list li {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      padding-left: 18px;
+      position: relative;
+      line-height: 1.5;
+    }
+    .messages-list li::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 7px;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent-purple);
+      box-shadow: 0 0 8px rgba(168, 85, 247, 0.7);
+    }
+
+    /* -------- Result column -------- */
+    .result-card { min-height: 560px; display: flex; flex-direction: column; }
+    .result-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+
+    .result-stage {
+      flex: 1;
+      border-radius: 22px;
+      overflow: hidden;
+      background: #07091a;
+      position: relative;
+      min-height: 460px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    }
+
+    .stage-placeholder {
+      position: absolute; inset: 0;
+      display: grid; place-content: center;
+      text-align: center;
+      padding: 28px;
+      gap: 10px;
+    }
+    .stage-placeholder h3 { font-size: 22px; max-width: 16ch; margin: 0 auto; color: #fff; }
+    .stage-preview-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .stage-preview-tag {
+      position: absolute; left: 14px; top: 14px; z-index: 3;
+      padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      background: rgba(5, 7, 18, 0.7); border: 1px solid rgba(168, 85, 247, 0.4);
+      color: #E2E8F0; backdrop-filter: blur(8px);
+    }
+
+    /* Loading overlay with rotating steps */
+    .loading-overlay {
+      position: absolute; inset: 0; z-index: 5;
+      display: grid; place-content: center; justify-items: center;
+      gap: 18px; padding: 28px; text-align: center;
+      background: rgba(5, 7, 18, 0.82);
+      backdrop-filter: blur(6px);
+    }
+    .loading-spinner {
+      width: 46px; height: 46px;
+      border-radius: 50%;
+      border: 3px solid rgba(139, 92, 246, 0.18);
+      border-top-color: var(--accent-purple-strong);
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-step { font-size: 16px; font-weight: 600; color: #fff; min-height: 22px; transition: opacity 0.3s ease; }
+    .loading-progress {
+      width: 220px; height: 4px; border-radius: 999px;
+      background: rgba(148, 163, 184, 0.18); overflow: hidden;
+    }
+    .loading-progress span {
+      display: block; height: 100%; width: 0%;
+      background: linear-gradient(90deg, #8B5CF6, #3B82F6);
+      transition: width 0.6s ease;
+    }
+
+    /* PSV mount */
+    .viewer-mount { position: absolute; inset: 0; }
+
+    /* Fullscreen styling: when the result-stage is fullscreen, fill the screen */
+    .result-stage:fullscreen { border-radius: 0; }
+    .result-stage:fullscreen .viewer-mount { inset: 0; }
+    .exit-fs-btn {
+      position: absolute; right: 14px; top: 14px; z-index: 8;
+      display: none;
+    }
+    .result-stage:fullscreen .exit-fs-btn { display: inline-flex; }
+
+    /* -------- Footer -------- */
+    footer {
+      background: transparent;
+      border-top: 1px solid rgba(168, 85, 247, 0.22);
+      position: relative;
+      margin-top: 40px;
+    }
+    footer::before {
+      content: ""; position: absolute; top: -1px; left: 10%; right: 10%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(168,85,247,0.7), rgba(59,130,246,0.7), transparent);
+      pointer-events: none;
+    }
+    footer a { color: var(--text-muted); text-decoration: none; }
+    footer a:hover { color: #fff; }
+    .footer-logo-horizontal { height: 36px; width: auto; object-fit: contain; display: block; }
+
+    /* -------- Custom futurist cursor (desktop only) -------- */
+    @media (min-width: 769px) {
+      body, a, button, input, select, textarea, .glass-card, .dropzone, .result-stage {
+        cursor: none;
+      }
+      .custom-cursor {
+        position: fixed; top: 0; left: 0;
+        width: 16px; height: 16px; border-radius: 999px;
+        pointer-events: none; z-index: 99999;
+        background: radial-gradient(circle, #ffffff 0%, #a855f7 35%, #3b82f6 75%);
+        box-shadow: 0 0 18px rgba(168, 85, 247, 0.9), 0 0 36px rgba(59, 130, 246, 0.55);
+        transform: translate3d(-100px, -100px, 0);
+        transition: width 0.2s ease, height 0.2s ease, opacity 0.2s ease, background 0.2s ease;
+        mix-blend-mode: screen;
+      }
+      .custom-cursor-trail {
+        position: fixed; top: 0; left: 0;
+        width: 44px; height: 44px; border-radius: 999px;
+        pointer-events: none; z-index: 99998;
+        border: 1px solid rgba(168, 85, 247, 0.35);
+        background: rgba(139, 92, 246, 0.08);
+        box-shadow: 0 0 45px rgba(139, 92, 246, 0.25);
+        transform: translate3d(-100px, -100px, 0);
+        transition: width 0.2s ease, height 0.2s ease, border-color 0.2s ease;
+      }
+      body.cursor-hover .custom-cursor {
+        width: 36px; height: 36px;
+        background: rgba(168, 85, 247, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.75);
+        box-shadow: 0 0 24px rgba(168, 85, 247, 0.7), 0 0 60px rgba(59, 130, 246, 0.4);
+      }
+      body.cursor-hover .custom-cursor-trail {
+        width: 72px; height: 72px;
+        border-color: rgba(59, 130, 246, 0.55);
+        box-shadow: 0 0 60px rgba(139, 92, 246, 0.4);
+      }
+    }
+    @media (max-width: 768px) {
+      .custom-cursor, .custom-cursor-trail { display: none; }
+      .tryit-grid { grid-template-columns: 1fr; }
+      .page-shell { padding: 40px 16px 72px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Custom futurist cursor (desktop only) -->
+  <div class="custom-cursor-trail" id="customCursorTrail" aria-hidden="true"></div>
+  <div class="custom-cursor" id="customCursor" aria-hidden="true"></div>
+
+  <!-- NAVBAR (same as site) -->
+  <nav class="navbar">
+    <div class="flex items-center justify-between w-full">
+      <a href="index.html" class="navbar-brand">
+        <img src="./assets/logo-horizontal.png" alt="Arch3 logo" class="navbar-logo-horizontal">
+      </a>
+      <div class="hidden md:flex gap-8 text-sm font-medium">
+        <a href="index.html#concept" class="transition">Concept</a>
+        <a href="index.html#features" class="transition">Features</a>
+        <a href="index.html#pricing" class="transition">Pricing</a>
+        <a href="index.html#roadmap" class="transition">Roadmap</a>
+        <a href="index.html#about" class="transition">About</a>
+      </div>
+      <a href="#try-tool" class="btn-primary text-sm">TRY IT! <span>→</span></a>
+    </div>
+  </nav>
+
+  <!-- Backend reachability warning (shown only if /api/health fails) -->
+  <div id="backendWarning" style="display:none; max-width:1100px; margin:16px auto 0; padding:12px 18px; border-radius:14px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.4); color:#fecaca; font-size:13.5px; line-height:1.6;">
+    ⚠️ <strong>Backend not detected on this address.</strong> Image generation won't work here.
+    Run <code style="background:rgba(255,255,255,0.1); padding:1px 6px; border-radius:6px;">npm start</code>
+    and open the app at <strong>http://localhost:3000/try-it</strong> — not Live Server (port 5500) or a <code style="background:rgba(255,255,255,0.1); padding:1px 6px; border-radius:6px;">file://</code> path.
+  </div>
+
+  <main class="page-shell">
+    <!-- HERO -->
+    <section class="text-center" data-aos="fade-up">
+      <div class="flex justify-center mb-6">
+        <div class="badge">
+          <span class="dot-pulse"></span>
+          <span>Beta Concept · Image-to-Image Spatial Preview</span>
+        </div>
+      </div>
+      <h1 class="text-5xl md:text-6xl font-bold mb-5">Try <span class="gradient-text">Arch3</span></h1>
+      <p class="helper-text mx-auto" style="max-width: 60ch; font-size: 17px;">
+        Upload a panoramic photo of your room, describe your vision, and generate a redesigned
+        360° spatial preview.
+      </p>
+    </section>
+
+    <!-- MAIN INTERFACE -->
+    <section id="try-tool" class="tryit-grid" style="margin-top: 48px;">
+      <!-- LEFT — INPUT -->
+      <div class="glass-card is-glow" data-aos="fade-right">
+        <p class="eyebrow">Upload your panorama</p>
+        <h2 class="text-2xl font-bold mt-2 mb-3">Capture the full room</h2>
+        <p class="helper-text">
+          For best results, stand in the center of the room and take a complete panoramic photo
+          before uploading.
+        </p>
+
+        <div class="callout" style="margin-top: 16px;">
+          <strong>Important:</strong> Use your phone's panorama mode and rotate slowly around your
+          own axis. The more complete the panorama, the better the 360° result.
+        </div>
+
+        <!-- Dropzone -->
+        <label class="dropzone" id="dropzone">
+          <input id="imageInput" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" hidden>
+          <div class="dropzone-empty" id="dropzoneEmpty">
+            <div class="dropzone-icon">⬆</div>
+            <h4>Drag &amp; drop your panorama</h4>
+            <p class="helper-text">Accepted: .jpg, .jpeg, .png, .webp · up to 20 MB</p>
+            <span class="btn-secondary" style="margin-top: 14px;">Choose Panorama</span>
+          </div>
+          <div class="dropzone-preview" id="dropzonePreview" hidden>
+            <img id="previewImg" alt="Selected panorama preview">
+            <p class="dropzone-filename" id="previewName"></p>
+            <span class="btn-secondary" id="replaceBtn" style="margin-top: 12px;">Remove / replace</span>
+          </div>
+        </label>
+        <p class="field-error" id="uploadError" hidden></p>
+
+        <!-- Prompt -->
+        <div style="margin-top: 24px;">
+          <label class="field-label" for="prompt">Describe your transformation</label>
+          <textarea
+            id="prompt"
+            class="prompt-input"
+            placeholder="Make this room feel like a warm modern architectural living space with natural wood, indirect lighting, neutral tones and premium furniture."
+          ></textarea>
+        </div>
+
+        <button class="btn-primary w-full justify-center" id="generateButton" style="margin-top: 18px; width: 100%; justify-content: center;" disabled>
+          Generate 360° Redesign <span>→</span>
+        </button>
+
+        <ul class="messages-list">
+          <li>Use a complete panoramic photo for the best result.</li>
+          <li>Stand in the center of the room and rotate slowly.</li>
+          <li>Arch3 works best when the original panorama clearly shows walls, windows, furniture and lighting.</li>
+          <li>Generated images are conceptual previews, not construction documents.</li>
+        </ul>
+      </div>
+
+      <!-- RIGHT — RESULT -->
+      <div class="glass-card result-card" data-aos="fade-left">
+        <div class="result-head">
+          <div>
+            <p class="eyebrow">360° preview</p>
+            <h2 class="text-2xl font-bold mt-1" id="resultTitle">Your spatial preview</h2>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="btn-secondary" id="gyroButton" type="button" hidden>Enable gyroscope</button>
+            <button class="btn-secondary" id="fullscreenButton" type="button" hidden>⛶ Fullscreen</button>
+          </div>
+        </div>
+
+        <div class="result-stage" id="resultStage">
+          <!-- Placeholder (before upload) -->
+          <div class="stage-placeholder" id="stagePlaceholder">
+            <p class="eyebrow">Result</p>
+            <h3>Your AI-generated 360° preview will appear here.</h3>
+            <p class="helper-text" style="max-width: 30ch; margin: 0 auto;">
+              Upload a panorama and describe your vision to begin.
+            </p>
+          </div>
+
+          <!-- Uploaded panorama preview (before generation) -->
+          <img class="stage-preview-img" id="stagePreviewImg" alt="Uploaded panorama" hidden>
+          <span class="stage-preview-tag" id="stagePreviewTag" hidden>Your upload</span>
+
+          <!-- Loading overlay -->
+          <div class="loading-overlay" id="loadingOverlay" hidden>
+            <div class="loading-spinner"></div>
+            <p class="loading-step" id="loadingStep">Analyzing room...</p>
+            <div class="loading-progress"><span id="loadingBar"></span></div>
+          </div>
+
+          <!-- 360 viewer mount -->
+          <div class="viewer-mount" id="viewerMount" hidden></div>
+
+          <!-- Exit fullscreen button (visible only in fullscreen) -->
+          <button class="btn-secondary exit-fs-btn" id="exitFsButton" type="button">✕ Exit 360°</button>
+        </div>
+
+        <p class="helper-text" id="viewerHint" style="margin-top: 14px;" hidden>
+          Drag to look around · scroll to zoom · click the preview to expand fullscreen · on mobile,
+          enable the gyroscope and move your phone.
+        </p>
+
+        <p class="helper-text" style="margin-top: 12px; font-size: 12px; opacity: 0.75;">
+          Best results come from complete panoramic photos. This preview is conceptual and optimized
+          for immersive viewing.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER (same as site) -->
+  <footer>
+    <div class="max-w-7xl mx-auto px-8 py-12" style="max-width: 1120px;">
+      <div class="grid md:grid-cols-3 gap-12 items-center">
+        <div class="flex flex-col items-start gap-2">
+          <img src="./assets/logo-horizontal.png" alt="Arch3 logo" class="footer-logo-horizontal">
+          <div class="text-xs" style="color: var(--text-muted);">Spatial AI · Concept 2026</div>
+        </div>
+        <div class="flex justify-center gap-8">
+          <a href="index.html#concept" class="text-sm transition">Concept</a>
+          <a href="index.html#features" class="text-sm transition">Features</a>
+          <a href="index.html#roadmap" class="text-sm transition">Roadmap</a>
+          <a href="index.html#waitlist" class="text-sm transition">Contact</a>
+        </div>
+        <div class="text-right text-sm" style="color: var(--text-muted);">
+          © 2026 Arch3 — All rights reserved.
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Custom cursor logic (same as site) -->
+  <script>
+    AOS.init({ duration: 800, offset: 80, once: true });
+
+    // Confirm we're actually served by the Express backend (so /api works).
+    (async () => {
+      try {
+        const res = await fetch('/api/health', { cache: 'no-store' });
+        if (!res.ok) throw new Error('not ok');
+        await res.json();
+      } catch {
+        const el = document.getElementById('backendWarning');
+        if (el) el.style.display = 'block';
+      }
+    })();
+
+    (() => {
+      const mqDesktop = window.matchMedia('(min-width: 769px)');
+      if (!mqDesktop.matches) return;
+      const cursor = document.getElementById('customCursor');
+      const trail = document.getElementById('customCursorTrail');
+      if (!cursor || !trail) return;
+
+      let mouseX = -100, mouseY = -100, trailX = mouseX, trailY = mouseY, rafId = null;
+      window.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX; mouseY = e.clientY;
+        cursor.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0) translate(-50%, -50%)`;
+      }, { passive: true });
+      window.addEventListener('mouseleave', () => { cursor.style.opacity = '0'; trail.style.opacity = '0'; });
+      window.addEventListener('mouseenter', () => { cursor.style.opacity = '1'; trail.style.opacity = '1'; });
+
+      const tick = () => {
+        trailX += (mouseX - trailX) * 0.18;
+        trailY += (mouseY - trailY) * 0.18;
+        trail.style.transform = `translate3d(${trailX}px, ${trailY}px, 0) translate(-50%, -50%)`;
+        rafId = requestAnimationFrame(tick);
+      };
+      tick();
+
+      const HOVER_SEL = 'a, button, input, select, textarea, .glass-card, .dropzone, .result-stage, .badge';
+      document.addEventListener('mouseover', (e) => {
+        if (e.target.closest && e.target.closest(HOVER_SEL)) document.body.classList.add('cursor-hover');
+      });
+      document.addEventListener('mouseout', (e) => {
+        const to = e.relatedTarget;
+        if (!to || !to.closest || !to.closest(HOVER_SEL)) document.body.classList.remove('cursor-hover');
+      });
+      window.addEventListener('beforeunload', () => { if (rafId) cancelAnimationFrame(rafId); });
+    })();
+  </script>
+
+  <!-- App logic: upload → prompt → generate → 360 viewer -->
+  <script type="module">
+    import { Viewer } from '@photo-sphere-viewer/core';
+    import { GyroscopePlugin } from '@photo-sphere-viewer/gyroscope-plugin';
+
+    const loadingSteps = [
+      'Analyzing room...',
+      'Understanding layout...',
+      'Preserving architecture...',
+      'Applying requested changes...',
+      'Rendering 360° preview...',
+    ];
+
+    const imageInput = document.getElementById('imageInput');
+    const dropzone = document.getElementById('dropzone');
+    const dropzoneEmpty = document.getElementById('dropzoneEmpty');
+    const dropzonePreview = document.getElementById('dropzonePreview');
+    const previewImg = document.getElementById('previewImg');
+    const previewName = document.getElementById('previewName');
+    const replaceBtn = document.getElementById('replaceBtn');
+    const uploadError = document.getElementById('uploadError');
+    const promptInput = document.getElementById('prompt');
+    const generateButton = document.getElementById('generateButton');
+
+    const resultStage = document.getElementById('resultStage');
+    const stagePlaceholder = document.getElementById('stagePlaceholder');
+    const stagePreviewImg = document.getElementById('stagePreviewImg');
+    const stagePreviewTag = document.getElementById('stagePreviewTag');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const loadingStep = document.getElementById('loadingStep');
+    const loadingBar = document.getElementById('loadingBar');
+    const viewerMount = document.getElementById('viewerMount');
+    const gyroButton = document.getElementById('gyroButton');
+    const fullscreenButton = document.getElementById('fullscreenButton');
+    const exitFsButton = document.getElementById('exitFsButton');
+    const viewerHint = document.getElementById('viewerHint');
+    const resultTitle = document.getElementById('resultTitle');
+
+    const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
+
+    let selectedFile = null;
+    let previewUrl = '';
+    let loadingTimer = null;
+    let loadingIndex = 0;
+    let viewer = null;
+    let gyroPlugin = null;
+    let gyroEnabled = false;
+
+    const setError = (message) => {
+      uploadError.hidden = !message;
+      uploadError.textContent = message || '';
+    };
+
+    const updateGenerateButton = () => {
+      generateButton.disabled = !(selectedFile && promptInput.value.trim());
+    };
+
+    const showUploadPreview = () => {
+      dropzoneEmpty.hidden = true;
+      dropzonePreview.hidden = false;
+      previewImg.src = previewUrl;
+      previewName.textContent = selectedFile ? selectedFile.name : '';
+
+      // Mirror the upload into the result stage (before generation)
+      destroyViewer();
+      viewerMount.hidden = true;
+      gyroButton.hidden = true;
+      fullscreenButton.hidden = true;
+      viewerHint.hidden = true;
+      stagePlaceholder.hidden = true;
+      stagePreviewImg.hidden = false;
+      stagePreviewImg.src = previewUrl;
+      stagePreviewTag.hidden = false;
+      stagePreviewTag.textContent = 'Your upload';
+      resultTitle.textContent = 'Your panorama';
+    };
+
+    const acceptFile = (file) => {
+      if (!file) return;
+      const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+      if (!allowedTypes.has(file.type)) {
+        setError('Invalid format. Use JPG, JPEG, PNG or WEBP.');
+        return;
+      }
+      if (file.size > 20 * 1024 * 1024) {
+        setError('Image is too large. Use a file smaller than 20 MB.');
+        return;
+      }
+      setError('');
+      selectedFile = file;
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = URL.createObjectURL(file);
+      showUploadPreview();
+      updateGenerateButton();
+    };
+
+    const resetUpload = (event) => {
+      if (event) { event.preventDefault(); event.stopPropagation(); }
+      selectedFile = null;
+      if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = ''; }
+      imageInput.value = '';
+      dropzoneEmpty.hidden = false;
+      dropzonePreview.hidden = true;
+      destroyViewer();
+      viewerMount.hidden = true;
+      gyroButton.hidden = true;
+      fullscreenButton.hidden = true;
+      viewerHint.hidden = true;
+      stagePreviewImg.hidden = true;
+      stagePreviewTag.hidden = true;
+      stagePlaceholder.hidden = false;
+      resultTitle.textContent = 'Your spatial preview';
+      updateGenerateButton();
+    };
+
+    imageInput.addEventListener('change', (e) => acceptFile(e.target.files?.[0]));
+    replaceBtn.addEventListener('click', resetUpload);
+
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('is-active'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('is-active'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('is-active');
+      acceptFile(e.dataTransfer.files?.[0]);
+    });
+    promptInput.addEventListener('input', updateGenerateButton);
+
+    // ---------- Loading steps ----------
+    const startLoading = () => {
+      loadingIndex = 0;
+      loadingStep.textContent = loadingSteps[0];
+      loadingBar.style.width = '8%';
+      loadingOverlay.hidden = false;
+      stagePlaceholder.hidden = true;
+      loadingTimer = window.setInterval(() => {
+        loadingIndex = Math.min(loadingIndex + 1, loadingSteps.length - 1);
+        loadingStep.textContent = loadingSteps[loadingIndex];
+        const pct = 8 + Math.round((loadingIndex / (loadingSteps.length - 1)) * 80);
+        loadingBar.style.width = pct + '%';
+      }, 1700);
+    };
+    const stopLoading = () => {
+      loadingOverlay.hidden = true;
+      if (loadingTimer) { window.clearInterval(loadingTimer); loadingTimer = null; }
+    };
+
+    // ---------- 360 viewer ----------
+    const destroyViewer = () => {
+      if (!viewer) return;
+      try { viewer.destroy(); } catch { /* ignore */ }
+      viewer = null; gyroPlugin = null; gyroEnabled = false;
+    };
+
+    const mountViewer = (imageUrl) => {
+      destroyViewer();
+      stagePreviewImg.hidden = true;
+      stagePreviewTag.hidden = true;
+      stagePlaceholder.hidden = true;
+      viewerMount.hidden = false;
+      resultTitle.textContent = 'Explore your redesign';
+
+      viewer = new Viewer({
+        container: viewerMount,
+        panorama: imageUrl,
+        navbar: false,
+        caption: '',
+        loadingTxt: '',
+        defaultZoomLvl: isMobile() ? 42 : 30,
+        mousewheel: true,
+        touchmoveTwoFingers: false,
+        moveInertia: true,
+        moveSpeed: isMobile() ? 0.7 : 1,
+        plugins: [[GyroscopePlugin, { touchmove: true, absolutePosition: false, moveMode: 'smooth' }]],
+      });
+
+      gyroPlugin = viewer.getPlugin(GyroscopePlugin);
+      viewerHint.hidden = false;
+      fullscreenButton.hidden = false;
+
+      // Desktop = mouse drag (PSV default). Mobile = touch drag + gyroscope.
+      if (isMobile()) {
+        gyroButton.hidden = false;
+        gyroButton.textContent = 'Enable gyroscope';
+        // Auto-attempt gyro once the viewer is up; iOS needs a gesture, which the
+        // canvas pointerdown handler (wired once below) provides.
+        window.setTimeout(() => { if (!gyroEnabled) enableGyro(); }, 300);
+      }
+    };
+
+    const enableGyro = async () => {
+      if (!gyroPlugin) return;
+      try {
+        if ('DeviceOrientationEvent' in window && typeof DeviceOrientationEvent.requestPermission === 'function') {
+          const permission = await DeviceOrientationEvent.requestPermission();
+          if (permission !== 'granted') return;
+        }
+        gyroPlugin.start();
+        gyroEnabled = true;
+        gyroButton.textContent = 'Gyroscope on';
+      } catch {
+        gyroButton.textContent = 'Gyroscope unavailable';
+      }
+    };
+    gyroButton.addEventListener('click', enableGyro);
+
+    // ---------- Fullscreen ----------
+    const enterFullscreen = () => {
+      if (document.fullscreenElement || !viewer) return;
+      if (resultStage.requestFullscreen) resultStage.requestFullscreen().catch(() => {});
+    };
+    const exitFullscreen = () => {
+      if (document.exitFullscreen && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    };
+
+    // Wire viewer controls ONCE (the mount element persists across regenerations,
+    // so attaching inside mountViewer would stack duplicate listeners).
+    fullscreenButton.addEventListener('click', enterFullscreen);
+    exitFsButton.addEventListener('click', (e) => { e.stopPropagation(); exitFullscreen(); });
+
+    // Tap/click the panorama to expand — but only a real tap, not the end of a
+    // drag (otherwise looking around would keep triggering fullscreen).
+    let pointerStart = null;
+    viewerMount.addEventListener('pointerdown', (e) => {
+      pointerStart = { x: e.clientX, y: e.clientY };
+      if (viewer && isMobile() && !gyroEnabled) enableGyro();
+    });
+    viewerMount.addEventListener('pointerup', (e) => {
+      if (!viewer || !pointerStart) { pointerStart = null; return; }
+      const moved = Math.abs(e.clientX - pointerStart.x) > 6 || Math.abs(e.clientY - pointerStart.y) > 6;
+      pointerStart = null;
+      if (!moved) enterFullscreen();
+    });
+
+    document.addEventListener('fullscreenchange', () => {
+      // PSV resizes itself via ResizeObserver; nudge it just in case.
+      if (viewer && typeof viewer.autoSize === 'function') {
+        window.setTimeout(() => viewer.autoSize(), 60);
+      }
+    });
+
+    // ---------- Generate ----------
+    generateButton.addEventListener('click', async () => {
+      if (!selectedFile) { setError('Choose a panorama image first.'); return; }
+      if (!promptInput.value.trim()) { setError('Describe the transformation first.'); return; }
+
+      setError('');
+      generateButton.disabled = true;
+      startLoading();
+
+      try {
+        const formData = new FormData();
+        formData.append('image', selectedFile);
+        formData.append('prompt', promptInput.value.trim());
+
+        let response;
+        try {
+          response = await fetch('/api/generate-redesign', { method: 'POST', body: formData });
+        } catch {
+          throw new Error('Could not reach the backend. Run "npm start" and open the app at http://localhost:3000 (not Live Server or a file:// path).');
+        }
+
+        // Read as text first so an empty/non-JSON response gives a clear message
+        // instead of "Unexpected end of JSON input".
+        const raw = await response.text();
+        let payload = {};
+        if (raw) {
+          try { payload = JSON.parse(raw); }
+          catch {
+            throw new Error(`The server returned a non-JSON response (HTTP ${response.status}). Make sure you opened the app at http://localhost:3000 with the backend running — not Live Server (port 5500) or a file:// path.`);
+          }
+        } else {
+          throw new Error(`Empty response from the server (HTTP ${response.status}). The backend may not be running on this address. Use "npm start" and http://localhost:3000.`);
+        }
+        if (!response.ok) throw new Error(payload.error || `Generation failed (HTTP ${response.status}).`);
+
+        loadingStep.textContent = loadingSteps[loadingSteps.length - 1];
+        loadingBar.style.width = '100%';
+        mountViewer(payload.imageUrl);
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Generation failed.');
+        // Fall back to showing the upload again if there was one
+        if (selectedFile && previewUrl) {
+          stagePreviewImg.hidden = false;
+          stagePreviewTag.hidden = false;
+        } else {
+          stagePlaceholder.hidden = false;
+        }
+      } finally {
+        stopLoading();
+        updateGenerateButton();
+      }
+    });
+
+    window.addEventListener('beforeunload', () => {
+      destroyViewer();
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    });
+
+    updateGenerateButton();
+  </script>
+</body>
+</html>

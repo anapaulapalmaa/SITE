@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sips -g pixelWidth -g pixelHeight \"/Users/Ana/SITE/ChatGPT Image 17 de mai. de 2026, 15_43_25.png\")",
+      "Bash(python3 -c \"from PIL import Image; print\\('ok'\\)\")",
+      "Bash(curl -sS -I -L --max-time 15 https://arch3.net/)",
+      "Bash(curl -sS --max-time 15 https://arch3.net/)",
+      "Bash(curl -sS -I --max-time 15 --resolve arch3.net:80:162.241.63.45 --resolve arch3.net:443:162.241.63.45 http://arch3.net/)",
+      "Bash(curl -sS --max-time 15 --resolve arch3.net:80:162.241.63.45 http://arch3.net/)",
+      "Bash(sips -g pixelWidth -g pixelHeight -g format \"/Users/Ana/SITE/IMAGEM AMBIENTE 360.jpg\")",
+      "Bash(sips -g pixelWidth -g pixelHeight -g format \"/Users/Ana/SITE/assets/imagem-ambiente-360.png\")",
+      "Bash(python3)",
+      "Bash(chmod 600 /tmp/arch3_deploy.exp /tmp/arch3_pw)",
+      "Bash(expect /tmp/arch3_deploy.exp)",
+      "Bash(shred -u /tmp/arch3_deploy.exp /tmp/arch3_pw)",
+      "Bash(curl -sS -I --max-time 15 --resolve arch3.net:80:162.241.63.45 http://arch3.net/assets/imagem-ambiente-360.jpg)",
+      "Bash(chmod 600 /tmp/arch3_pw /tmp/arch3_deploy.exp)",
+      "Read(//usr/local/**)",
+      "Read(//Users/Ana/.asdf/shims/**)",
+      "Read(//Users/Ana/**)"
+    ]
+  }
+}

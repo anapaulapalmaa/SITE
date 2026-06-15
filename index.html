@@ -1,0 +1,2486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arch3 — Reimagine your space through AI</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Playfair Display (serif) + Inter (sans) + Allura (script) -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Allura&display=swap" rel="stylesheet">
+  
+  <!-- Framer Motion & AOS for animations -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css">
+  
+  <!-- Lucide Icons -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
+
+  <!-- Photo Sphere Viewer (360° panorama) + gyroscope plugin -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core@5/index.min.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+        "@photo-sphere-viewer/core": "https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core@5/index.module.js",
+        "@photo-sphere-viewer/gyroscope-plugin": "https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/gyroscope-plugin@5/index.module.js"
+      }
+    }
+  </script>
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Allura&family=Inter:wght@400;500;600;700;800&display=swap');
+
+    * {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    
+    h1, h2, h3 {
+      font-family: 'Playfair Display', serif;
+    }
+    
+    :root {
+      --primary-purple: #8B5CF6;
+      --primary-blue: #3B82F6;
+      --dark-text: #121426;
+      --secondary-gray: #6B7280;
+      --light-bg: #F8F9FC;
+    }
+    
+    /* Smooth scrolling */
+    html {
+      scroll-behavior: smooth;
+    }
+    
+    /* Custom gradient text */
+    .gradient-text {
+      background: linear-gradient(90deg, #8B5CF6, #3B82F6);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+    
+    /* Navbar sticky — centered via auto margins (no left/transform trick:
+       that combo extended the layout box past the viewport on mobile,
+       causing a horizontal white strip when the user dragged sideways). */
+    .navbar {
+      position: sticky;
+      top: 16px;
+      z-index: 50;
+      max-width: 1120px;
+      width: calc(100% - 32px);
+      margin: 16px auto 0;
+      backdrop-filter: blur(20px);
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(229, 231, 235, 0.6);
+      border-radius: 9999px;
+      padding: 12px 24px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+      box-sizing: border-box;
+    }
+
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+    }
+
+    .navbar-logo-horizontal {
+      height: 34px;
+      width: auto;
+      object-fit: contain;
+      display: block;
+    }
+
+    /* Before/After Slider */
+    .slider-container {
+      position: relative;
+      width: 100%;
+      max-width: 420px;
+      height: 520px;
+      overflow: hidden;
+      border-radius: 32px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+      background: #f0f0f0;
+    }
+    
+    .slider-img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      object-position: center;
+    }
+    
+    .slider-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 50%;
+      height: 100%;
+      overflow: hidden;
+      transition: width 0.1s ease-out;
+    }
+    
+    .slider-overlay .slider-img {
+      width: 420px;
+      max-width: none;
+    }
+    
+    .slider-handle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 50px;
+      height: 50px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      cursor: ew-resize;
+      z-index: 10;
+      transition: left 0.1s ease-out;
+    }
+    
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(229, 231, 235, 0.6);
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--secondary-gray);
+      backdrop-filter: blur(12px);
+    }
+    
+    .dot-pulse {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary-purple);
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    /* Phone mockup */
+    .phone-mockup {
+      position: relative;
+      width: 300px;
+      height: 600px;
+      background: #000;
+      border-radius: 48px;
+      padding: 10px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      border: 6px solid #000;
+    }
+    
+    .phone-notch {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 150px;
+      height: 28px;
+      background: #000;
+      border-radius: 0 0 24px 24px;
+      z-index: 10;
+    }
+    
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      background: white;
+      border-radius: 42px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Fade up animation */
+    .fade-up {
+      animation: fadeUp 0.6s ease-out;
+    }
+    
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    /* Card hover effect */
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+    
+    .card-hover:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+    }
+    
+    /* Button effects */
+    .btn-primary {
+      background: linear-gradient(90deg, #8B5CF6, #A855F7);
+      color: white;
+      padding: 12px 28px;
+      border-radius: 9999px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+    }
+    
+    .btn-secondary {
+      background: white;
+      color: var(--dark-text);
+      padding: 12px 28px;
+      border-radius: 9999px;
+      font-weight: 600;
+      border: 1px solid rgba(229, 231, 235, 0.8);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-secondary:hover {
+      background: rgba(248, 249, 252, 1);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    }
+    
+    /* Section spacing */
+    .section {
+      padding: 80px 32px;
+    }
+    
+    /* Container */
+    .max-w-7xl {
+      max-width: 1120px;
+    }
+    
+    /* Floating animation */
+    .float {
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+    }
+    
+    /* Cursive script for "through" */
+    .script-through {
+      font-family: 'Allura', 'Great Vibes', cursive;
+      font-weight: 400;
+      font-style: normal;
+      line-height: 1.2;
+      letter-spacing: 0.02em;
+      background: linear-gradient(90deg, #8B5CF6, #3B82F6);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+
+    /* 360° Panorama viewer (Hero) */
+    .panorama-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      max-height: 640px;
+      border-radius: 32px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+      background: #0b0d18;
+    }
+
+    @media (max-width: 768px) {
+      /* Immersive vertical "spatial viewer" framing on phones */
+      .panorama-wrapper {
+        aspect-ratio: auto;
+        height: 72vh;
+        min-height: 620px;
+        max-height: none;
+        border-radius: 32px;
+      }
+
+      /* Subtle cinematic inner zoom — closer feel, no harsh crop */
+      .panorama-wrapper > .panorama-viewer {
+        transform: scale(1.08);
+        transform-origin: center center;
+        transition: transform 0.6s cubic-bezier(0.22, 0.61, 0.36, 1);
+      }
+
+      /* Glassmorphism prompt card — slim, translucent, doesn't bury the scene */
+      .hero-prompt-card {
+        bottom: 18px !important;
+        left: 18px !important;
+        right: 18px !important;
+        max-width: none !important;
+        padding: 12px 14px !important;
+        background: rgba(15, 17, 38, 0.32) !important;
+        backdrop-filter: blur(20px) saturate(140%);
+        -webkit-backdrop-filter: blur(20px) saturate(140%);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+        color: #fff;
+      }
+      .hero-prompt-card .prompt-eyebrow { color: rgba(255, 255, 255, 0.72) !important; }
+      .hero-prompt-card .prompt-quote   { color: #fff !important; font-size: 12.5px; }
+      .hero-prompt-card .prompt-cta     { color: #c4b5fd !important; }
+
+      /* Gyro hint: small, glassy, pulsing — fades after gyro becomes active */
+      .gyro-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+        background: rgba(255, 255, 255, 0.18);
+        -webkit-backdrop-filter: blur(20px);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
+        color: #fff;
+        animation: gyroHintPulse 2.4s ease-in-out infinite;
+      }
+      .gyro-btn:hover { transform: none; }
+
+      .panorama-wrapper.gyro-on .gyro-btn {
+        animation: none;
+        opacity: 0.55;
+        transform: scale(0.94);
+        transition: opacity 1s ease, transform 1s ease;
+      }
+    }
+
+    @keyframes gyroHintPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.35), 0 4px 20px rgba(0, 0, 0, 0.18); }
+      50%      { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0),    0 4px 20px rgba(0, 0, 0, 0.18); }
+    }
+
+    .panorama-viewer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+    }
+
+    .panorama-viewer.is-dragging,
+    .panorama-viewer:active {
+      cursor: grabbing;
+    }
+
+    /* Hide Photo Sphere Viewer's default navbar — we use our own overlays */
+    .panorama-viewer .psv-navbar,
+    .panorama-viewer .psv-loader-container {
+      display: none !important;
+    }
+
+    .panorama-viewer canvas {
+      display: block;
+    }
+
+    /* Overlay layer sits above the viewer but doesn't block panning */
+    .panorama-overlays {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .panorama-overlays > * {
+      pointer-events: auto;
+    }
+
+    .gyro-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(229, 231, 235, 0.6);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      color: #121426;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .gyro-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    .gyro-btn.is-active {
+      background: linear-gradient(90deg, #8B5CF6, #3B82F6);
+      color: white;
+      border-color: transparent;
+    }
+
+    /* Hint that the inline viewer is clickable to expand */
+    .panorama-wrapper {
+      cursor: pointer;
+    }
+
+    /* Fullscreen 360° experience */
+    .panorama-fullscreen {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 9999;
+      background: #000;
+      display: none;
+    }
+
+    .panorama-fullscreen.is-open {
+      display: block;
+    }
+
+    .panorama-fullscreen .panorama-viewer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+    }
+
+    .panorama-fullscreen .panorama-viewer.is-dragging,
+    .panorama-fullscreen .panorama-viewer:active {
+      cursor: grabbing;
+    }
+
+    body.panorama-locked {
+      overflow: hidden;
+    }
+
+    .exit-360-button {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 10000;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      color: #111326;
+      border-radius: 9999px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .exit-360-button:hover {
+      background: rgba(255, 255, 255, 0.95);
+    }
+
+    .fs-gyro-button {
+      position: fixed;
+      top: 24px;
+      left: 24px;
+      z-index: 10000;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      color: #111326;
+      border-radius: 9999px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .fs-gyro-button.is-visible {
+      display: inline-flex;
+    }
+
+    .fs-gyro-button.is-active {
+      background: linear-gradient(90deg, #8B5CF6, #3B82F6);
+      color: #fff;
+      border-color: transparent;
+    }
+
+    @media (max-width: 768px) {
+      .exit-360-button,
+      .fs-gyro-button {
+        top: 16px;
+        padding: 10px 14px;
+        font-size: 13px;
+      }
+      .exit-360-button { right: 16px; }
+      .fs-gyro-button { left: 16px; }
+    }
+
+    /* Bold sans-serif for "AI." */
+    .ai-bold {
+      font-family: 'Inter', 'Helvetica', Arial, sans-serif;
+      font-weight: 800;
+      font-style: normal;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      background: linear-gradient(90deg, #8B5CF6, #3B82F6);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+
+    /* =========================================================
+       DARK FUTURIST THEME OVERLAY
+       Layered after the base styles so it overrides without
+       reformatting layout. Keeps panorama / slider / form intact.
+       ========================================================= */
+
+    :root {
+      --bg-deep: #050712;
+      --bg-soft: #0B0D22;
+      --text-primary: #F8FAFC;
+      --text-muted: #94A3B8;
+      --text-soft: #CBD5E1;
+      --accent-purple: #A78BFA;
+      --accent-purple-strong: #A855F7;
+      --accent-blue: #3B82F6;
+      --line-soft: rgba(148, 163, 184, 0.16);
+      --line-strong: rgba(139, 92, 246, 0.35);
+      --glass-card: rgba(15, 18, 42, 0.72);
+      --glass-strong: rgba(15, 18, 42, 0.86);
+    }
+
+    html, body {
+      background: var(--bg-deep);
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 15% 10%, rgba(139, 92, 246, 0.22), transparent 35%),
+        radial-gradient(circle at 85% 20%, rgba(59, 130, 246, 0.18), transparent 32%),
+        radial-gradient(circle at 50% 70%, rgba(168, 85, 247, 0.10), transparent 42%),
+        var(--bg-deep) !important;
+      color: var(--text-primary) !important;
+      background-attachment: fixed;
+    }
+
+    /* Make every section transparent so the body glow shows through */
+    .section,
+    section.bg-white,
+    section.bg-\[\#F8F9FC\],
+    section.bg-gradient-to-br {
+      background: transparent !important;
+    }
+
+    /* Slight tint behind the hero so it reads "premium" */
+    #concept {
+      position: relative;
+      isolation: isolate;
+    }
+    #concept::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background:
+        radial-gradient(ellipse at 50% 40%, rgba(139, 92, 246, 0.18), transparent 55%),
+        radial-gradient(ellipse at 80% 60%, rgba(59, 130, 246, 0.14), transparent 55%);
+      pointer-events: none;
+    }
+
+    /* -------- Headings / body text -------- */
+    h1, h2, h3, h4 {
+      color: var(--text-primary) !important;
+    }
+
+    /* Catch the muted gray-on-white text utility used across sections */
+    .text-\[\#6B7280\] { color: var(--text-muted) !important; }
+    .text-\[\#121426\] { color: var(--text-primary) !important; }
+    .text-\[\#8B5CF6\] { color: var(--accent-purple) !important; }
+
+    /* -------- Navbar — glass capsule with luminous border -------- */
+    .navbar {
+      background: rgba(10, 12, 30, 0.72) !important;
+      border: 1px solid rgba(139, 92, 246, 0.25) !important;
+      box-shadow:
+        0 20px 80px rgba(0, 0, 0, 0.35),
+        0 0 40px rgba(139, 92, 246, 0.15) !important;
+    }
+    .navbar a { color: var(--text-soft); }
+    .navbar a:hover { color: #fff; }
+
+    /* -------- Primary / secondary buttons -------- */
+    .btn-primary {
+      background: linear-gradient(90deg, #8B5CF6, #3B82F6) !important;
+      box-shadow: 0 0 28px rgba(139, 92, 246, 0.45);
+    }
+    .btn-primary:hover {
+      box-shadow: 0 0 40px rgba(139, 92, 246, 0.6);
+    }
+    .btn-secondary {
+      background: rgba(15, 18, 42, 0.6) !important;
+      color: #fff !important;
+      border: 1px solid rgba(139, 92, 246, 0.35) !important;
+      backdrop-filter: blur(14px);
+    }
+    .btn-secondary:hover {
+      background: rgba(20, 24, 56, 0.7) !important;
+      border-color: rgba(139, 92, 246, 0.6) !important;
+      box-shadow: 0 0 24px rgba(139, 92, 246, 0.2);
+    }
+
+    /* -------- Badges (Early-stage concept, etc.) -------- */
+    .badge {
+      background: rgba(15, 18, 42, 0.72) !important;
+      border: 1px solid rgba(168, 85, 247, 0.28) !important;
+      color: #E2E8F0 !important;
+      backdrop-filter: blur(16px);
+    }
+
+    /* -------- Hero panorama: luminous gradient ring + outer glow -------- */
+    .panorama-wrapper {
+      box-shadow:
+        0 30px 100px rgba(0, 0, 0, 0.5),
+        0 0 70px rgba(139, 92, 246, 0.28) !important;
+      background: #07091a !important;
+    }
+    .panorama-wrapper::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      padding: 1px;
+      border-radius: inherit;
+      background: linear-gradient(135deg,
+        rgba(168, 85, 247, 0.9),
+        rgba(59, 130, 246, 0.65),
+        rgba(168, 85, 247, 0.2));
+      -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+      mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+      z-index: 6;
+    }
+
+    /* Restyle the inline prompt card for dark theme (desktop default) */
+    .hero-prompt-card {
+      background: rgba(15, 18, 42, 0.72) !important;
+      border: 1px solid rgba(168, 85, 247, 0.32);
+      color: #fff !important;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35), 0 0 30px rgba(139, 92, 246, 0.15);
+    }
+    .hero-prompt-card .prompt-eyebrow { color: rgba(255, 255, 255, 0.72) !important; }
+    .hero-prompt-card .prompt-quote   { color: #fff !important; }
+    .hero-prompt-card .prompt-cta     { color: #c4b5fd !important; }
+
+    /* Gyro hint badge on top of the panorama */
+    .gyro-btn {
+      background: rgba(15, 18, 42, 0.72) !important;
+      border: 1px solid rgba(168, 85, 247, 0.32) !important;
+      color: #E2E8F0 !important;
+    }
+    .gyro-btn:hover { box-shadow: 0 0 24px rgba(168, 85, 247, 0.25); }
+    .gyro-btn.is-active {
+      background: linear-gradient(90deg, #8B5CF6, #3B82F6) !important;
+      color: #fff !important;
+      border-color: transparent !important;
+    }
+
+    /* -------- Generic dark glass cards -------- */
+    .card-hover,
+    section .border.border-\[\#E5E7EB\].rounded-2xl,
+    section .border.border-\[\#E5E7EB\].rounded-3xl {
+      background: var(--glass-card) !important;
+      border: 1px solid var(--line-soft) !important;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+      color: var(--text-soft);
+    }
+    .card-hover:hover {
+      transform: translateY(-2px);
+      border-color: rgba(139, 92, 246, 0.55) !important;
+      box-shadow:
+        0 24px 80px rgba(139, 92, 246, 0.16),
+        0 0 0 1px rgba(139, 92, 246, 0.25);
+    }
+
+    /* Feature grid lives in one big rounded box with inner dividers */
+    #features .border.border-\[\#E5E7EB\].rounded-3xl {
+      background: var(--glass-strong) !important;
+    }
+    #features .border-r, #features .border-b {
+      border-color: rgba(148, 163, 184, 0.10) !important;
+    }
+    #features .w-10.h-10.bg-\[\#E5E7EB\] {
+      background: rgba(168, 85, 247, 0.15) !important;
+      border: 1px solid rgba(168, 85, 247, 0.35);
+    }
+
+    /* About section chips — dark glass pills */
+    #about .px-4.py-2.bg-white {
+      background: rgba(15, 18, 42, 0.72) !important;
+      border: 1px solid rgba(168, 85, 247, 0.28) !important;
+      color: var(--text-soft) !important;
+      backdrop-filter: blur(14px);
+    }
+
+    /* Pricing "MOST POPULAR" card stays accented */
+    #pricing .bg-\[\#121426\] {
+      background: linear-gradient(160deg, rgba(139, 92, 246, 0.18), rgba(20, 22, 60, 0.95)) !important;
+      border: 1px solid rgba(168, 85, 247, 0.55) !important;
+      box-shadow:
+        0 30px 80px rgba(139, 92, 246, 0.25),
+        0 0 0 1px rgba(168, 85, 247, 0.25) inset !important;
+    }
+
+    /* Solution-section check icons — keep the purple stroke visible */
+    #solution .bg-\[\#E5E7EB\] {
+      background: rgba(168, 85, 247, 0.15) !important;
+      border: 1px solid rgba(168, 85, 247, 0.35);
+    }
+
+    /* Phone mockup screen overlay — already mostly dark, just tone the chrome */
+    .phone-mockup {
+      box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.5),
+        0 0 60px rgba(139, 92, 246, 0.18) !important;
+    }
+
+    /* Before / After slider container */
+    .slider-container {
+      box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.4),
+        0 0 60px rgba(139, 92, 246, 0.18) !important;
+    }
+
+    /* -------- Waitlist / form card -------- */
+    #waitlist .border.border-\[\#E5E7EB\].rounded-\[40px\],
+    #waitlist .bg-gradient-to-br {
+      background: var(--glass-strong) !important;
+      border: 1px solid rgba(168, 85, 247, 0.35) !important;
+      box-shadow:
+        0 30px 100px rgba(0, 0, 0, 0.45),
+        0 0 60px rgba(139, 92, 246, 0.18);
+      position: relative;
+    }
+    #waitlist input,
+    #waitlist select {
+      background: rgba(255, 255, 255, 0.06) !important;
+      border: 1px solid rgba(148, 163, 184, 0.18) !important;
+      color: #fff !important;
+      caret-color: #fff;
+    }
+    #waitlist input::placeholder { color: rgba(203, 213, 225, 0.55); }
+    #waitlist input:focus,
+    #waitlist select:focus {
+      border-color: #8B5CF6 !important;
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18) !important;
+      outline: none;
+    }
+    #waitlist select option { background: #0B0D22; color: #fff; }
+
+    /* Generic dot-pulse accent in dark mode */
+    .dot-pulse { background: #A855F7; box-shadow: 0 0 12px rgba(168, 85, 247, 0.7); }
+
+    /* -------- Footer -------- */
+    footer {
+      background: transparent !important;
+      border-top: 1px solid rgba(168, 85, 247, 0.22) !important;
+      position: relative;
+    }
+    footer::before {
+      content: "";
+      position: absolute;
+      top: -1px; left: 10%; right: 10%; height: 1px;
+      background: linear-gradient(90deg,
+        transparent,
+        rgba(168, 85, 247, 0.7),
+        rgba(59, 130, 246, 0.7),
+        transparent);
+      pointer-events: none;
+    }
+    footer a { color: var(--text-muted) !important; }
+    footer a:hover { color: #fff !important; }
+
+    .footer-logo-horizontal {
+      height: 36px;
+      width: auto;
+      object-fit: contain;
+      display: block;
+    }
+
+    /* -------- Custom futurist cursor (desktop only) -------- */
+    @media (min-width: 769px) {
+      body, a, button, input, select, textarea, .card-hover, .panorama-wrapper {
+        cursor: none;
+      }
+
+      .custom-cursor {
+        position: fixed;
+        top: 0; left: 0;
+        width: 16px; height: 16px;
+        border-radius: 999px;
+        pointer-events: none;
+        z-index: 99999;
+        background: radial-gradient(circle, #ffffff 0%, #a855f7 35%, #3b82f6 75%);
+        box-shadow:
+          0 0 18px rgba(168, 85, 247, 0.9),
+          0 0 36px rgba(59, 130, 246, 0.55);
+        transform: translate3d(-100px, -100px, 0);
+        transition: width 0.2s ease, height 0.2s ease, opacity 0.2s ease, background 0.2s ease;
+        mix-blend-mode: screen;
+      }
+
+      .custom-cursor-trail {
+        position: fixed;
+        top: 0; left: 0;
+        width: 44px; height: 44px;
+        border-radius: 999px;
+        pointer-events: none;
+        z-index: 99998;
+        border: 1px solid rgba(168, 85, 247, 0.35);
+        background: rgba(139, 92, 246, 0.08);
+        box-shadow: 0 0 45px rgba(139, 92, 246, 0.25);
+        transform: translate3d(-100px, -100px, 0);
+        transition: width 0.2s ease, height 0.2s ease, border-color 0.2s ease;
+      }
+
+      body.cursor-hover .custom-cursor {
+        width: 36px; height: 36px;
+        background: rgba(168, 85, 247, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.75);
+        box-shadow:
+          0 0 24px rgba(168, 85, 247, 0.7),
+          0 0 60px rgba(59, 130, 246, 0.4);
+      }
+      body.cursor-hover .custom-cursor-trail {
+        width: 72px; height: 72px;
+        border-color: rgba(59, 130, 246, 0.55);
+        box-shadow: 0 0 60px rgba(139, 92, 246, 0.4);
+      }
+
+      /* Stronger glow specifically over the hero 360 */
+      body.cursor-on-hero .custom-cursor {
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow:
+          0 0 30px rgba(168, 85, 247, 0.95),
+          0 0 80px rgba(59, 130, 246, 0.55);
+      }
+      body.cursor-on-hero .custom-cursor-trail {
+        border-color: rgba(168, 85, 247, 0.75);
+        box-shadow: 0 0 80px rgba(168, 85, 247, 0.45);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .custom-cursor,
+      .custom-cursor-trail { display: none; }
+    }
+
+    /* =========================================================
+       Mobile overflow guards — no sideways drag, no white strip
+       ========================================================= */
+    html, body {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+    body { position: relative; }
+    .section { box-sizing: border-box; max-width: 100%; }
+    img, video, canvas { max-width: 100%; }
+    /* Anything explicitly using 100vw must not add lateral padding;
+       this lets fullscreen overlays keep 100vw while ordinary content
+       stays within the viewport. */
+
+    /* =========================================================
+       Touch glow (mobile only) — soft trailing light under finger
+       ========================================================= */
+    .touch-glow,
+    .touch-glow-trail { display: none; }
+
+    @media (max-width: 768px) {
+      .touch-glow {
+        display: block;
+        position: fixed;
+        top: 0; left: 0;
+        width: 34px; height: 34px;
+        border-radius: 999px;
+        pointer-events: none;
+        z-index: 99999;
+        opacity: 0;
+        transform: translate3d(-100px, -100px, 0) translate(-50%, -50%);
+        background: radial-gradient(circle,
+          rgba(255, 255, 255, 0.85) 0%,
+          rgba(168, 85, 247, 0.45) 28%,
+          rgba(59, 130, 246, 0.18) 62%,
+          transparent 100%);
+        filter: blur(6px);
+        transition: opacity 0.25s ease;
+        mix-blend-mode: screen;
+      }
+
+      .touch-glow-trail {
+        display: block;
+        position: fixed;
+        top: 0; left: 0;
+        width: 90px; height: 90px;
+        border-radius: 999px;
+        pointer-events: none;
+        z-index: 99998;
+        opacity: 0;
+        transform: translate3d(-100px, -100px, 0) translate(-50%, -50%);
+        background: radial-gradient(circle,
+          rgba(139, 92, 246, 0.22) 0%,
+          rgba(59, 130, 246, 0.12) 45%,
+          transparent 72%);
+        filter: blur(18px);
+        transition: opacity 0.35s ease;
+        mix-blend-mode: screen;
+      }
+
+      body.touch-active .touch-glow,
+      body.touch-active .touch-glow-trail { opacity: 1; }
+    }
+
+    /* =========================================================
+       In-phone "Arch3 app" product demo (Solution section)
+       ========================================================= */
+    .demo-phone {
+      background: #06081A !important;
+      position: relative;
+      isolation: isolate;
+    }
+
+    .demo-stage {
+      position: relative;
+      flex: 1 1 auto;
+      overflow: hidden;
+      background: #06081A;
+    }
+
+    .demo-pan {
+      position: absolute;
+      inset: 0;
+      background-size: auto 130%;
+      background-position: 50% 50%;
+      background-repeat: no-repeat;
+      transform: translate3d(var(--demo-tx, 0px), var(--demo-ty, 0px), 0);
+      transition:
+        opacity 0.9s cubic-bezier(0.4, 0, 0.2, 1),
+        filter 0.9s cubic-bezier(0.4, 0, 0.2, 1),
+        transform 0.25s ease-out;
+      animation: demoPan 18s ease-in-out infinite alternate;
+      will-change: opacity, filter, transform;
+    }
+    .demo-pan-before {
+      background-image: url("./assets/before-room.png");
+      filter: brightness(0.58) saturate(0.72) contrast(0.95);
+    }
+    .demo-pan-after {
+      background-image: url("./assets/after-room.png");
+      filter: brightness(1.06) saturate(1.08);
+      opacity: 0;
+    }
+    .demo-phone.show-after .demo-pan-after { opacity: 1; }
+    .demo-phone.show-after .demo-pan-before {
+      opacity: 0;
+      filter: blur(10px) brightness(0.35) saturate(0.5);
+    }
+
+    @keyframes demoPan {
+      0%   { background-position: 30% 50%; }
+      100% { background-position: 70% 50%; }
+    }
+
+    .demo-vignette {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 50% 55%, transparent 35%, rgba(0, 0, 0, 0.55) 100%),
+        linear-gradient(to bottom, rgba(6, 8, 26, 0.45) 0%, transparent 18%, transparent 72%, rgba(6, 8, 26, 0.7) 100%);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* Top-left "ARCH3" app badge — sits below the notch */
+    .demo-applogo {
+      position: absolute;
+      top: 30px;
+      left: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px 4px 4px;
+      background: rgba(15, 18, 42, 0.6);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(168, 85, 247, 0.32);
+      border-radius: 999px;
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      z-index: 4;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+    .demo-applogo img {
+      width: 18px;
+      height: 18px;
+      object-fit: contain;
+      border-radius: 5px;
+      display: block;
+    }
+
+    /* Top-right "360°" chip */
+    .demo-360-chip {
+      position: absolute;
+      top: 30px;
+      right: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      background: rgba(15, 18, 42, 0.55);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 999px;
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      z-index: 4;
+    }
+    .demo-360-chip svg { animation: demoChipPulse 3s ease-in-out infinite; }
+    @keyframes demoChipPulse {
+      0%, 100% { opacity: 0.6; }
+      50%      { opacity: 1; }
+    }
+
+    /* Floating particles (subtle warm dust) */
+    .demo-particles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 3;
+      overflow: hidden;
+    }
+    .demo-particles span {
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.9), rgba(168, 85, 247, 0.5));
+      filter: blur(0.5px);
+      opacity: 0;
+      animation: demoParticle 7s linear infinite;
+    }
+    .demo-particles span:nth-child(1) { left: 12%; bottom: -10px; animation-delay: 0s;    }
+    .demo-particles span:nth-child(2) { left: 28%; bottom: -10px; animation-delay: 1.2s;  }
+    .demo-particles span:nth-child(3) { left: 46%; bottom: -10px; animation-delay: 2.4s;  }
+    .demo-particles span:nth-child(4) { left: 64%; bottom: -10px; animation-delay: 3.6s;  }
+    .demo-particles span:nth-child(5) { left: 78%; bottom: -10px; animation-delay: 4.8s;  }
+    .demo-particles span:nth-child(6) { left: 90%; bottom: -10px; animation-delay: 5.4s;  }
+    @keyframes demoParticle {
+      0%   { transform: translateY(0)     scale(0.6); opacity: 0; }
+      10%  { opacity: 1; }
+      75%  { opacity: 0.45; }
+      100% { transform: translateY(-380px) scale(1.15); opacity: 0; }
+    }
+    .demo-phone.show-after .demo-particles span {
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.95), rgba(59, 130, 246, 0.6));
+    }
+
+    /* Generating overlay */
+    .demo-loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(20, 22, 60, 0.6), rgba(5, 7, 18, 0.55)),
+        rgba(5, 7, 18, 0.55);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.45s ease, visibility 0.45s ease;
+      z-index: 5;
+    }
+    .demo-phone.is-loading .demo-loading {
+      opacity: 1;
+      visibility: visible;
+    }
+    .demo-loading-spinner {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 2px solid rgba(168, 85, 247, 0.18);
+      border-top-color: #A855F7;
+      border-right-color: #3B82F6;
+      animation: demoSpin 0.95s linear infinite;
+      box-shadow: 0 0 24px rgba(139, 92, 246, 0.35);
+    }
+    @keyframes demoSpin { to { transform: rotate(360deg); } }
+
+    .demo-loading-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      color: rgba(255, 255, 255, 0.92);
+      text-shadow: 0 0 12px rgba(139, 92, 246, 0.5);
+    }
+    .demo-loading-bar {
+      width: 140px;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      position: relative;
+    }
+    .demo-loading-bar-fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #A855F7, #3B82F6, #A855F7);
+      background-size: 200% 100%;
+      transform-origin: left;
+      transform: scaleX(0);
+      transition: transform 1.7s cubic-bezier(0.22, 0.61, 0.36, 1);
+      animation: demoLoadShimmer 1.6s linear infinite;
+    }
+    .demo-phone.is-loading .demo-loading-bar-fill { transform: scaleX(1); }
+    @keyframes demoLoadShimmer {
+      to { background-position: -200% 0; }
+    }
+
+    /* Prompt footer (real chatbot-style input) */
+    .demo-prompt {
+      flex: 0 0 auto;
+      padding: 12px 14px 16px;
+      background: linear-gradient(to top,
+        #06081A 60%,
+        rgba(6, 8, 26, 0.85) 80%,
+        rgba(6, 8, 26, 0));
+      position: relative;
+      z-index: 4;
+    }
+    .demo-prompt-eyebrow {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      color: rgba(168, 85, 247, 0.9);
+      margin-bottom: 6px;
+    }
+    .demo-prompt-input {
+      min-height: 58px;
+      padding: 8px 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(168, 85, 247, 0.28);
+      border-radius: 12px;
+      font-size: 10.5px;
+      line-height: 1.45;
+      color: #fff;
+      font-weight: 500;
+      margin-bottom: 8px;
+      box-shadow: inset 0 0 18px rgba(139, 92, 246, 0.08);
+    }
+    .demo-prompt-text { white-space: pre-wrap; }
+    .demo-caret {
+      display: inline-block;
+      width: 1.5px;
+      height: 11px;
+      background: #A855F7;
+      vertical-align: -2px;
+      margin-left: 1px;
+      box-shadow: 0 0 6px rgba(168, 85, 247, 0.8);
+      animation: demoCaret 0.9s steps(2) infinite;
+    }
+    @keyframes demoCaret { 50% { opacity: 0; } }
+
+    .demo-generate {
+      width: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 12px;
+      background: linear-gradient(90deg, #8B5CF6, #3B82F6);
+      border: none;
+      border-radius: 999px;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      cursor: default;
+      box-shadow: 0 0 24px rgba(139, 92, 246, 0.45);
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+    .demo-generate.is-active {
+      transform: scale(0.94);
+      box-shadow: 0 0 36px rgba(139, 92, 246, 0.75);
+    }
+    .demo-phone.show-after .demo-generate {
+      background: linear-gradient(90deg, #3B82F6, #8B5CF6);
+    }
+  </style>
+</head>
+<body class="bg-white text-[#121426]">
+
+  <!-- Custom futurist cursor (desktop only — hidden via CSS on mobile) -->
+  <div class="custom-cursor-trail" id="customCursorTrail" aria-hidden="true"></div>
+  <div class="custom-cursor" id="customCursor" aria-hidden="true"></div>
+
+  <!-- Touch glow (mobile only — hidden via CSS on desktop) -->
+  <div class="touch-glow-trail" id="touchGlowTrail" aria-hidden="true"></div>
+  <div class="touch-glow" id="touchGlow" aria-hidden="true"></div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="flex items-center justify-between w-full">
+      <!-- Logo -->
+      <a href="#" class="navbar-brand no-underline">
+        <img src="./assets/logo-horizontal.png" alt="Arch3 logo" class="navbar-logo-horizontal">
+      </a>
+      
+      <!-- Menu Center -->
+      <div class="hidden md:flex gap-8 text-sm font-medium">
+        <a href="#concept" class="text-[#6B7280] hover:text-[#121426] transition">Concept</a>
+        <a href="#features" class="text-[#6B7280] hover:text-[#121426] transition">Features</a>
+        <a href="#pricing" class="text-[#6B7280] hover:text-[#121426] transition">Pricing</a>
+        <a href="#roadmap" class="text-[#6B7280] hover:text-[#121426] transition">Roadmap</a>
+        <a href="#about" class="text-[#6B7280] hover:text-[#121426] transition">About</a>
+      </div>
+      
+      <!-- Button Right -->
+      <a href="try-it.html" class="btn-primary text-sm inline-flex items-center gap-2 no-underline">
+        TRY IT! <span>→</span>
+      </a>
+    </div>
+  </nav>
+  
+  <!-- HERO SECTION -->
+  <section id="concept" class="section bg-gradient-to-br from-[#F8F9FC] via-white to-[#FAFAFF]">
+    <div class="max-w-7xl mx-auto">
+      <!-- Badge -->
+      <div class="flex justify-center mb-8">
+        <div class="badge">
+          <span class="dot-pulse"></span>
+          <span>Early-stage concept · Spatial AI</span>
+        </div>
+      </div>
+      
+      <!-- Title -->
+      <h1 class="text-center text-5xl md:text-7xl font-bold mb-6 leading-tight">
+        Reimagine your space<br>
+        <span class="script-through text-6xl md:text-8xl">through</span> <span class="ai-bold text-6xl md:text-7xl">AI.</span>
+      </h1>
+      
+      <!-- Subtitle -->
+      <p class="text-center text-lg text-[#6B7280] max-w-2xl mx-auto mb-8">
+        Arch3 is an immersive AI platform that helps people visualize architectural transformations in real spaces — directly through their phone.
+      </p>
+      
+      <!-- Buttons -->
+      <div class="flex justify-center gap-4 mb-8 flex-wrap">
+        <button class="btn-primary flex items-center gap-2">
+          Explore the Concept <span>→</span>
+        </button>
+        <a href="try-it.html" class="btn-secondary inline-flex items-center gap-2 no-underline">
+          TRY IT! <span>→</span>
+        </a>
+      </div>
+      
+      <!-- Small text -->
+      <p class="text-center text-sm text-[#6B7280] mb-16 max-w-xl mx-auto">
+        Capture your space, describe your vision, and explore how your room could look — before making any real change.
+      </p>
+      
+      <!-- 360° Panorama Hero -->
+      <div class="relative max-w-5xl mx-auto mb-8">
+        <div class="panorama-wrapper">
+          <!-- Viewer mounts here -->
+          <div id="heroPanorama" class="panorama-viewer" aria-label="Interactive 360 degree room preview"></div>
+
+          <!-- Overlays (badge + prompt card) -->
+          <div class="panorama-overlays">
+            <!-- Top right: gyroscope CTA / badge -->
+            <button id="gyroBtn" type="button" class="gyro-btn absolute top-6 right-6" aria-pressed="false">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <span id="gyroBtnLabel">Move your phone to explore</span>
+            </button>
+
+            <!-- Bottom left: prompt card -->
+            <div class="hero-prompt-card absolute bottom-6 left-6 bg-white/90 backdrop-blur-md px-4 py-3 rounded-2xl shadow-lg max-w-xs">
+              <div class="prompt-eyebrow text-xs font-semibold text-[#6B7280] mb-1">ARCH3 360° PREVIEW</div>
+              <div class="prompt-quote text-sm font-medium text-[#121426] mb-2">"Rustic-chic living room, warm fireplace, dark wood and starlit pool view"</div>
+              <div class="prompt-cta flex items-center gap-2 text-xs text-[#8B5CF6] font-semibold">
+                <span>MOVE YOUR PHONE · EXPLORE IN 360°</span>
+                <span class="dot-pulse"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 360° FULLSCREEN OVERLAY -->
+  <div id="panoramaFullscreen" class="panorama-fullscreen" role="dialog" aria-modal="true" aria-label="Immersive 360 degree preview" aria-hidden="true">
+    <div id="heroPanoramaFs" class="panorama-viewer"></div>
+    <button id="fsGyroBtn" type="button" class="fs-gyro-button" aria-pressed="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"></path>
+        <circle cx="12" cy="12" r="3"></circle>
+      </svg>
+      <span id="fsGyroLabel">Enable gyroscope</span>
+    </button>
+    <button id="exit360Btn" type="button" class="exit-360-button" aria-label="Exit 360 mode">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+      Exit 360°
+    </button>
+  </div>
+
+  <!-- PROBLEM SECTION -->
+  <section id="problem" class="section bg-white">
+    <div class="max-w-7xl mx-auto">
+      <div class="grid md:grid-cols-2 gap-16 items-center">
+        <!-- Left: Text -->
+        <div data-aos="fade-right">
+          <div class="mb-4">
+            <span class="text-xs font-bold tracking-widest text-[#8B5CF6]">01 · THE PROBLEM</span>
+          </div>
+          <h2 class="text-4xl md:text-5xl font-bold mb-6">
+            Imagining a space is hard.
+          </h2>
+          <p class="text-lg text-[#6B7280] mb-4 leading-relaxed">
+            Most people struggle to visualize how a room will look after a renovation, redesign, or decoration change. Floor plans, references, and moodboards inspire ideas — but they rarely show how the transformation would actually feel inside the real space.
+          </p>
+          <p class="text-lg text-[#6B7280] leading-relaxed">
+            People want to test possibilities before spending money on furniture, paint, or contractors.
+          </p>
+        </div>
+        
+        <!-- Right: Before/After Slider -->
+        <div data-aos="fade-left" class="flex justify-center">
+          <div class="slider-container">
+            <!-- AFTER IMAGE (background) -->
+            <img src="assets/after-room.png" alt="After" class="slider-img">
+            
+            <!-- BEFORE IMAGE (overlay on top) -->
+            <div class="slider-overlay" id="sliderOverlay">
+              <img src="assets/before-room.png" alt="Before" class="slider-img">
+            </div>
+            <div class="slider-handle" id="sliderHandle">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 19H9M15 16H9M17 13l-5 5-5-5M7 13l5-5 5 5"></path>
+              </svg>
+            </div>
+            
+            <!-- Badges -->
+            <div class="absolute top-4 left-4 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white">
+              BEFORE
+            </div>
+            <div class="absolute top-4 right-4 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white">
+              AFTER
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- SOLUTION SECTION -->
+  <section id="solution" class="section bg-[#F8F9FC]">
+    <div class="max-w-7xl mx-auto">
+      <div class="grid md:grid-cols-2 gap-16 items-center">
+        <!-- Left: Phone Mockup -->
+        <div data-aos="fade-right" class="flex justify-center">
+          <div class="phone-mockup">
+            <div class="phone-notch"></div>
+            <div class="phone-screen demo-phone" id="archDemo" aria-label="Arch3 app preview">
+              <div class="demo-stage">
+                <div class="demo-pan demo-pan-before"></div>
+                <div class="demo-pan demo-pan-after"></div>
+                <div class="demo-vignette"></div>
+
+                <div class="demo-applogo">
+                  <img src="./assets/logo-square.png" alt="">
+                  <span>ARCH3</span>
+                </div>
+
+                <div class="demo-360-chip" aria-hidden="true">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12a9 9 0 1 1-3.7-7.3"></path><polyline points="21 4 21 9 16 9"></polyline>
+                  </svg>
+                  <span>360°</span>
+                </div>
+
+                <div class="demo-particles" aria-hidden="true">
+                  <span></span><span></span><span></span><span></span><span></span><span></span>
+                </div>
+
+                <div class="demo-loading" aria-hidden="true">
+                  <div class="demo-loading-spinner"></div>
+                  <div class="demo-loading-label">GENERATING SPATIAL PREVIEW…</div>
+                  <div class="demo-loading-bar"><div class="demo-loading-bar-fill"></div></div>
+                </div>
+              </div>
+
+              <div class="demo-prompt">
+                <div class="demo-prompt-eyebrow">PROMPT</div>
+                <div class="demo-prompt-input">
+                  <span class="demo-prompt-text" id="demoPromptText"></span><span class="demo-caret" aria-hidden="true"></span>
+                </div>
+                <button type="button" class="demo-generate" id="demoGenerateBtn" tabindex="-1" aria-hidden="true">
+                  <span>Generate</span>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Right: Text -->
+        <div data-aos="fade-left">
+          <div class="mb-4">
+            <span class="text-xs font-bold tracking-widest text-[#8B5CF6]">02 · THE SOLUTION</span>
+          </div>
+          <h2 class="text-4xl md:text-5xl font-bold mb-6">
+            Instant spatial imagination.
+          </h2>
+          <p class="text-lg text-[#6B7280] mb-8 leading-relaxed">
+            Arch3 uses artificial intelligence and immersive visualization to transform real environments into conceptual architectural versions. Capture a room, describe what you want, and view the AI-generated transformation directly on your phone.
+          </p>
+          
+          <!-- Checklist -->
+          <div class="space-y-4">
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0 w-8 h-8 rounded-full bg-[#E5E7EB] flex items-center justify-center mt-1">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <span class="text-lg font-medium">Capture your room</span>
+            </div>
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0 w-8 h-8 rounded-full bg-[#E5E7EB] flex items-center justify-center mt-1">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <span class="text-lg font-medium">Describe your vision</span>
+            </div>
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0 w-8 h-8 rounded-full bg-[#E5E7EB] flex items-center justify-center mt-1">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <span class="text-lg font-medium">Generate the transformation</span>
+            </div>
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0 w-8 h-8 rounded-full bg-[#E5E7EB] flex items-center justify-center mt-1">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <span class="text-lg font-medium">Explore it in 360°</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- HOW IT WORKS -->
+  <section id="how" class="section bg-white">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-16">
+        <span class="text-xs font-bold tracking-widest text-[#8B5CF6] block mb-4">HOW IT WORKS</span>
+        <h2 class="text-4xl md:text-6xl font-bold mb-6">
+          Capture. Describe. Transform. Explore.
+        </h2>
+      </div>
+      
+      <!-- Cards -->
+      <div class="grid md:grid-cols-4 gap-6">
+        <div class="card-hover bg-white border border-[#E5E7EB] rounded-2xl p-8">
+          <div class="text-xs font-bold text-[#8B5CF6] mb-3 tracking-widest">STEP 01</div>
+          <h3 class="text-2xl font-bold mb-4">Capture</h3>
+          <p class="text-[#6B7280]">Use your phone to capture your room or upload a 360° image.</p>
+        </div>
+        
+        <div class="card-hover bg-white border border-[#E5E7EB] rounded-2xl p-8">
+          <div class="text-xs font-bold text-[#8B5CF6] mb-3 tracking-widest">STEP 02</div>
+          <h3 class="text-2xl font-bold mb-4">Describe</h3>
+          <p class="text-[#6B7280]">Write what you want: 'modern bedroom', 'old money living room', 'minimalist kitchen'.</p>
+        </div>
+        
+        <div class="card-hover bg-white border border-[#E5E7EB] rounded-2xl p-8">
+          <div class="text-xs font-bold text-[#8B5CF6] mb-3 tracking-widest">STEP 03</div>
+          <h3 class="text-2xl font-bold mb-4">Generate</h3>
+          <p class="text-[#6B7280]">Arch3 creates an AI-powered visual transformation of your real space.</p>
+        </div>
+        
+        <div class="card-hover bg-white border border-[#E5E7EB] rounded-2xl p-8">
+          <div class="text-xs font-bold text-[#8B5CF6] mb-3 tracking-widest">STEP 04</div>
+          <h3 class="text-2xl font-bold mb-4">Explore</h3>
+          <p class="text-[#6B7280]">Move your phone and explore your redesigned environment in 360°.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- KEY FEATURES -->
+  <section id="features" class="section bg-[#F8F9FC]">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-16">
+        <span class="text-xs font-bold tracking-widest text-[#8B5CF6] block mb-4">KEY FEATURES</span>
+        <h2 class="text-4xl md:text-6xl font-bold mb-6">
+          Designed for the imagination, not the <span class="gradient-text">blueprint.</span>
+        </h2>
+      </div>
+      
+      <!-- Features Grid 4x2 -->
+      <div class="border border-[#E5E7EB] rounded-3xl overflow-hidden bg-white">
+        <div class="grid md:grid-cols-2">
+          <!-- Feature 1 -->
+          <div class="p-8 border-b border-r border-[#E5E7EB]">
+            <div class="w-10 h-10 bg-[#E5E7EB] rounded-lg flex items-center justify-center mb-4">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2">
+                <circle cx="12" cy="12" r="1"></circle><path d="M12 1v6m6.16-1.86l-4.24 4.24m6 6l-4.24-4.24m4.24 4.24l-4.24 4.24M5.64 5.64l4.24 4.24m-6 6l4.24-4.24"></path>
+              </svg>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Infinite Style Generator</h3>
+            <p class="text-[#6B7280]">Test minimalist, old money, japandi, modern, luxury hotel, farmhouse, industrial — and beyond.</p>
+          </div>
+          
+          <!-- Feature 2 -->
+          <div class="p-8 border-b border-[#E5E7EB]">
+            <div class="w-10 h-10 bg-[#E5E7EB] rounded-lg flex items-center justify-center mb-4">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Before vs After 360°</h3>
+            <p class="text-[#6B7280]">Compare your real room with the AI version in an interactive immersive experience.</p>
+          </div>
+          
+          <!-- Feature 3 -->
+          <div class="p-8 border-r border-b border-[#E5E7EB]">
+            <div class="w-10 h-10 bg-[#E5E7EB] rounded-lg flex items-center justify-center mb-4">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2">
+                <path d="M12 2v20M2 12h20"></path><circle cx="12" cy="12" r="10"></circle>
+              </svg>
+            </div>
+            <h3 class="font-bold text-lg mb-2">AI Budget Mode</h3>
+            <p class="text-[#6B7280]">See transformations adapted to different budgets and realistic renovation paths.</p>
+          </div>
+          
+          <!-- Feature 4 -->
+          <div class="p-8 border-b border-[#E5E7EB]">
+            <div class="w-10 h-10 bg-[#E5E7EB] rounded-lg flex items-center justify-center mb-4">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path>
+              </svg>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Pinterest to Reality</h3>
+            <p class="text-[#6B7280]">Drop references from Pinterest, TikTok, or moodboards and see them in your own space.</p>
+          </div>
+          
+          <!-- Feature 5 -->
+          <div class="p-8 border-r border-b border-[#E5E7EB]">
+            <div class="w-10 h-10 bg-[#E5E7EB] rounded-lg flex items-center justify-center mb-4">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line>
+              </svg>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Social & Shareable</h3>
+            <p class="text-[#6B7280]">Designs built to live in reels, stories, and the way people share inspiration today.</p>
+          </div>
+          
+          <!-- Feature 6 -->
+          <div class="p-8 border-b border-[#E5E7EB]">
+            <div class="w-10 h-10 bg-[#E5E7EB] rounded-lg flex items-center justify-center mb-4">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </div>
+            <h3 class="font-bold text-lg mb-2">AI Interior Coach</h3>
+            <p class="text-[#6B7280]">A conversational AI that learns your taste and curates personalized environments.</p>
+          </div>
+          
+          <!-- Feature 7 -->
+          <div class="p-8 border-r border-b border-[#E5E7EB]">
+            <div class="w-10 h-10 bg-[#E5E7EB] rounded-lg flex items-center justify-center mb-4">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+              </svg>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Free First Creation</h3>
+            <p class="text-[#6B7280]">Every user gets one free generation to feel the magic before choosing a plan.</p>
+          </div>
+          
+          <!-- Feature 8 -->
+          <div class="p-8">
+            <div class="w-10 h-10 bg-[#E5E7EB] rounded-lg flex items-center justify-center mb-4">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2">
+                <path d="M12 2L15.09 8.26H22L17.55 12.52L19.64 18.78L12 14.51L4.36 18.78L6.45 12.52L2 8.26H8.91L12 2Z"></path>
+              </svg>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Spatial Imagination</h3>
+            <p class="text-[#6B7280]">Your phone becomes a window into the next version of your room.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- PRICING -->
+  <section id="pricing" class="section bg-white">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-16">
+        <span class="text-xs font-bold tracking-widest text-[#8B5CF6] block mb-4">PRICING · CONCEPT</span>
+        <h2 class="text-4xl md:text-6xl font-bold mb-6">
+          Flexible plans for every kind of vision.
+        </h2>
+        <p class="text-lg text-[#6B7280] max-w-2xl mx-auto">
+          Arch3 lets users experience the product first — then choose how deeply they want to explore their future spaces.
+        </p>
+      </div>
+      
+      <!-- Pricing Cards -->
+      <div class="grid md:grid-cols-5 gap-4">
+        <!-- Free Trial -->
+        <div class="card-hover bg-white border border-[#E5E7EB] rounded-2xl p-6 text-center">
+          <div class="text-4xl font-bold mb-1">1</div>
+          <div class="text-sm text-[#6B7280] mb-4">creation</div>
+          <h3 class="font-bold mb-3">Free Trial</h3>
+          <p class="text-sm text-[#6B7280]">Test the potential of the platform.</p>
+        </div>
+        
+        <!-- Starter -->
+        <div class="card-hover bg-white border border-[#E5E7EB] rounded-2xl p-6 text-center">
+          <div class="text-4xl font-bold mb-1">5</div>
+          <div class="text-sm text-[#6B7280] mb-4">creations</div>
+          <h3 class="font-bold mb-3">Starter</h3>
+          <p class="text-sm text-[#6B7280]">For users testing a few ideas.</p>
+        </div>
+        
+        <!-- Plus - HIGHLIGHTED -->
+        <div class="card-hover bg-[#121426] text-white border border-[#121426] rounded-2xl p-6 text-center relative -mt-2 scale-105">
+          <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-[#8B5CF6] text-white px-3 py-1 rounded-full text-xs font-bold">
+            MOST POPULAR
+          </div>
+          <div class="text-4xl font-bold mb-1">10</div>
+          <div class="text-sm text-white/70 mb-4">creations</div>
+          <h3 class="font-bold mb-3">Plus</h3>
+          <p class="text-sm text-white/70">For planning a real transformation.</p>
+        </div>
+        
+        <!-- Premium -->
+        <div class="card-hover bg-white border border-[#E5E7EB] rounded-2xl p-6 text-center">
+          <div class="text-4xl font-bold mb-1">25</div>
+          <div class="text-sm text-[#6B7280] mb-4">creations</div>
+          <h3 class="font-bold mb-3">Premium</h3>
+          <p class="text-sm text-[#6B7280]">Explore many directions for one space.</p>
+        </div>
+        
+        <!-- Pro -->
+        <div class="card-hover bg-white border border-[#E5E7EB] rounded-2xl p-6 text-center">
+          <div class="text-4xl font-bold mb-1">100<span class="text-xl">/mo</span></div>
+          <div class="text-sm text-[#6B7280] mb-4">creations</div>
+          <h3 class="font-bold mb-3">Pro</h3>
+          <p class="text-sm text-[#6B7280]">Heavy users, creators, design students.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- WHY ARCH3 -->
+  <section id="why" class="section bg-[#F8F9FC]">
+    <div class="max-w-3xl mx-auto text-center">
+      <span class="text-xs font-bold tracking-widest text-[#8B5CF6] block mb-4">WHY ARCH3</span>
+      <h2 class="text-4xl md:text-6xl font-bold mb-8">
+        Not another <span class="italic gradient-text">architecture software.</span>
+      </h2>
+      <p class="text-xl text-[#6B7280] mb-8 leading-relaxed">
+        Arch3 is not built to feel like complex professional design tools. It's for everyday people who want to imagine, explore, and understand their spaces before making real decisions. While most apps focus on technical features, Arch3 focuses on emotion, simplicity, and immersive visualization.
+      </p>
+      <div class="text-2xl font-bold gradient-text">
+        Less technical. More visual. More intuitive. More human.
+      </div>
+    </div>
+  </section>
+  
+  <!-- ABOUT / PERSONAL PROJECT -->
+  <section id="about" class="section bg-white">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-12">
+        <span class="text-xs font-bold tracking-widest text-[#8B5CF6] block mb-4">ABOUT · PERSONAL PROJECT</span>
+        <h2 class="text-4xl md:text-6xl font-bold">
+          A personal innovation project at the intersection of architecture and AI.
+        </h2>
+      </div>
+      
+      <!-- Two columns -->
+      <div class="grid md:grid-cols-2 gap-12 mb-12">
+        <p class="text-lg text-[#6B7280] leading-relaxed">
+          Arch3 is being developed as a personal startup concept exploring how artificial intelligence, architecture, and immersive technology can change the way people experience and imagine spaces.
+        </p>
+        <p class="text-lg text-[#6B7280] leading-relaxed">
+          The project reflects an interest in architecture, design, entrepreneurship, user experience, and emerging technologies such as AI and spatial computing — turning an idea into a structured, evolving proposal.
+        </p>
+      </div>
+      
+      <!-- Chips -->
+      <div class="flex flex-wrap justify-center gap-3">
+        <span class="px-4 py-2 bg-white border border-[#E5E7EB] rounded-full text-sm font-medium text-[#121426]">Independent initiative</span>
+        <span class="px-4 py-2 bg-white border border-[#E5E7EB] rounded-full text-sm font-medium text-[#121426]">Interdisciplinary thinking</span>
+        <span class="px-4 py-2 bg-white border border-[#E5E7EB] rounded-full text-sm font-medium text-[#121426]">Entrepreneurial vision</span>
+        <span class="px-4 py-2 bg-white border border-[#E5E7EB] rounded-full text-sm font-medium text-[#121426]">Architecture × AI</span>
+        <span class="px-4 py-2 bg-white border border-[#E5E7EB] rounded-full text-sm font-medium text-[#121426]">Spatial computing</span>
+        <span class="px-4 py-2 bg-white border border-[#E5E7EB] rounded-full text-sm font-medium text-[#121426]">Human-centered design</span>
+      </div>
+    </div>
+  </section>
+  
+  <!-- ROADMAP -->
+  <section id="roadmap" class="section bg-[#F8F9FC]">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-16">
+        <span class="text-xs font-bold tracking-widest text-[#8B5CF6] block mb-4">ROADMAP</span>
+        <h2 class="text-4xl md:text-6xl font-bold">
+          From concept to immersive product.
+        </h2>
+      </div>
+      
+      <!-- Timeline/Cards -->
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="card-hover bg-white border border-[#E5E7EB] rounded-2xl p-8">
+          <div class="flex items-start gap-4">
+            <div class="text-3xl font-bold text-[#8B5CF6]">1</div>
+            <div>
+              <h3 class="font-bold text-lg mb-2">Phase 1 — Concept & Research</h3>
+              <p class="text-[#6B7280]">Branding, market research, competitor analysis, website and user interviews.</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card-hover bg-white border border-[#E5E7EB] rounded-2xl p-8">
+          <div class="flex items-start gap-4">
+            <div class="text-3xl font-bold text-[#8B5CF6]">2</div>
+            <div>
+              <h3 class="font-bold text-lg mb-2">Phase 2 — Visual Prototype</h3>
+              <p class="text-[#6B7280]">Figma mockups, concept video, user flow and simulated product demo.</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card-hover bg-white border border-[#E5E7EB] rounded-2xl p-8">
+          <div class="flex items-start gap-4">
+            <div class="text-3xl font-bold text-[#8B5CF6]">3</div>
+            <div>
+              <h3 class="font-bold text-lg mb-2">Phase 3 — MVP</h3>
+              <p class="text-[#6B7280]">Image upload, text prompt, AI-generated redesign and basic 360° viewer.</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card-hover bg-white border border-[#E5E7EB] rounded-2xl p-8">
+          <div class="flex items-start gap-4">
+            <div class="text-3xl font-bold text-[#8B5CF6]">4</div>
+            <div>
+              <h3 class="font-bold text-lg mb-2">Phase 4 — Future Product</h3>
+              <p class="text-[#6B7280]">Mobile app, motion-based immersive viewing, AI personalization and AR/spatial computing features.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- WAITLIST / FORM -->
+  <section id="waitlist" class="section bg-white">
+    <div class="max-w-5xl mx-auto">
+      <div class="bg-gradient-to-br from-white via-white to-[#F8F9FC] border border-[#E5E7EB] rounded-[40px] p-12 md:p-16">
+        <div class="grid md:grid-cols-2 gap-12">
+          <!-- Left -->
+          <div>
+            <span class="text-xs font-bold tracking-widest text-[#8B5CF6] block mb-4">TRY IT!</span>
+            <h2 class="text-4xl md:text-5xl font-bold mb-6 leading-tight">
+              Imagine your future space<br>
+              <span class="italic gradient-text">before it exists.</span>
+            </h2>
+            <p class="text-lg text-[#6B7280]">
+              Arch3 is an early-stage concept exploring a new way to visualize interiors through AI and immersive technology. Be among the first to experience it.
+            </p>
+          </div>
+          
+          <!-- Right - Form -->
+          <form id="waitlistForm" class="space-y-4">
+            <input 
+              type="text" 
+              placeholder="Your name" 
+              class="w-full px-4 py-3 border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]"
+              required
+            >
+            <input 
+              type="text" 
+              placeholder="USA" 
+              class="w-full px-4 py-3 border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]"
+              required
+            >
+            <input 
+              type="email" 
+              placeholder="you@email.com" 
+              class="w-full px-4 py-3 border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]"
+              required
+            >
+            <select class="w-full px-4 py-3 border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]" required>
+              <option value="">Choose a space</option>
+              <option value="bedroom">Bedroom</option>
+              <option value="living">Living room</option>
+              <option value="kitchen">Kitchen</option>
+              <option value="bathroom">Bathroom</option>
+              <option value="office">Home office</option>
+              <option value="studio">Studio</option>
+              <option value="other">Other</option>
+            </select>
+            <a href="try-it.html" class="btn-primary w-full justify-center inline-flex items-center gap-2 no-underline">
+              TRY IT! <span>→</span>
+            </a>
+            <p class="text-xs text-[#6B7280] text-center">
+              We respect your inbox. No spam, ever.
+            </p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- FOOTER -->
+  <footer>
+    <div class="max-w-7xl mx-auto px-8 py-12">
+      <div class="grid md:grid-cols-3 gap-12 items-center">
+        <!-- Left: brand -->
+        <div class="flex flex-col items-start gap-2">
+          <img src="./assets/logo-horizontal.png" alt="Arch3 logo" class="footer-logo-horizontal">
+          <div class="text-xs text-[#94A3B8]">Spatial AI · Concept 2026</div>
+        </div>
+
+        <!-- Center -->
+        <div class="flex justify-center gap-8">
+          <a href="#concept" class="text-sm transition">Concept</a>
+          <a href="#features" class="text-sm transition">Features</a>
+          <a href="#roadmap" class="text-sm transition">Roadmap</a>
+          <a href="#waitlist" class="text-sm transition">Contact</a>
+        </div>
+
+        <!-- Right -->
+        <div class="text-right text-sm text-[#94A3B8]">
+          © 2026 Arch3 — All rights reserved.
+        </div>
+      </div>
+    </div>
+  </footer>
+  
+  <script>
+    // Initialize AOS
+    AOS.init({
+      duration: 800,
+      offset: 100,
+      once: true
+    });
+
+    // -------- Custom futurist cursor (desktop only) --------
+    (() => {
+      const mqDesktop = window.matchMedia('(min-width: 769px)');
+      if (!mqDesktop.matches) return;
+
+      const cursor = document.getElementById('customCursor');
+      const trail  = document.getElementById('customCursorTrail');
+      if (!cursor || !trail) return;
+
+      let mouseX = -100, mouseY = -100;
+      let trailX = mouseX, trailY = mouseY;
+      let rafId = null;
+
+      const onMove = (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        cursor.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0) translate(-50%, -50%)`;
+      };
+      window.addEventListener('mousemove', onMove, { passive: true });
+
+      // Hide while off the window
+      window.addEventListener('mouseleave', () => {
+        cursor.style.opacity = '0';
+        trail.style.opacity  = '0';
+      });
+      window.addEventListener('mouseenter', () => {
+        cursor.style.opacity = '1';
+        trail.style.opacity  = '1';
+      });
+
+      const tick = () => {
+        // Eased trail follow
+        trailX += (mouseX - trailX) * 0.18;
+        trailY += (mouseY - trailY) * 0.18;
+        trail.style.transform = `translate3d(${trailX}px, ${trailY}px, 0) translate(-50%, -50%)`;
+        rafId = requestAnimationFrame(tick);
+      };
+      tick();
+
+      // Hover state via event delegation
+      const HOVER_SEL = 'a, button, input, select, textarea, .card-hover, .hero-prompt-card, .panorama-wrapper, .slider-container, .phone-mockup, .gyro-btn, .badge';
+      document.addEventListener('mouseover', (e) => {
+        if (e.target.closest && e.target.closest(HOVER_SEL)) {
+          document.body.classList.add('cursor-hover');
+        }
+        if (e.target.closest && e.target.closest('.panorama-wrapper')) {
+          document.body.classList.add('cursor-on-hero');
+        }
+      });
+      document.addEventListener('mouseout', (e) => {
+        const to = e.relatedTarget;
+        if (!to || !to.closest || !to.closest(HOVER_SEL)) {
+          document.body.classList.remove('cursor-hover');
+        }
+        if (!to || !to.closest || !to.closest('.panorama-wrapper')) {
+          document.body.classList.remove('cursor-on-hero');
+        }
+      });
+
+      // Stop the rAF on unload to avoid leaks during dev hot reloads
+      window.addEventListener('beforeunload', () => { if (rafId) cancelAnimationFrame(rafId); });
+    })();
+
+    // -------- In-phone Arch3 demo (Solution section) --------
+    (() => {
+      const root = document.getElementById('archDemo');
+      const promptEl = document.getElementById('demoPromptText');
+      const btn = document.getElementById('demoGenerateBtn');
+      if (!root || !promptEl || !btn) return;
+
+      const PROMPT = 'Transform into a warm modern architectural living space with natural wood, ambient lighting and premium furniture';
+
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      const typeText = async (el, text, msPer) => {
+        for (let i = 0; i < text.length; i++) {
+          el.textContent = text.slice(0, i + 1);
+          await wait(msPer);
+        }
+      };
+
+      let running = false;
+      const runOnce = async () => {
+        // Phase 1 — idle on "before"
+        root.classList.remove('show-after', 'is-loading');
+        btn.classList.remove('is-active');
+        promptEl.textContent = '';
+        await wait(700);
+
+        // Phase 2 — type the prompt
+        await typeText(promptEl, PROMPT, 22);
+        await wait(450);
+
+        // Phase 3 — button press
+        btn.classList.add('is-active');
+        await wait(280);
+        btn.classList.remove('is-active');
+
+        // Phase 4 — loading
+        root.classList.add('is-loading');
+        await wait(1850);
+
+        // Phase 5 — morph to "after" (crossfade + blur)
+        root.classList.add('show-after');
+        await wait(700);
+        root.classList.remove('is-loading');
+
+        // Phase 6 — settle on "after"
+        await wait(2400);
+      };
+
+      const loop = async () => {
+        if (running) return;
+        running = true;
+        while (document.contains(root)) {
+          await runOnce();
+        }
+        running = false;
+      };
+
+      // Defer until visible (perf + battery on mobile)
+      if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver((entries) => {
+          if (entries.some((e) => e.isIntersecting)) {
+            io.disconnect();
+            loop();
+          }
+        }, { threshold: 0.15 });
+        io.observe(root);
+      } else {
+        loop();
+      }
+
+      // Subtle 360° parallax
+      // Desktop: mouse position relative to mockup → CSS vars.
+      // Mobile: deviceorientation (no separate permission — the hero already
+      // requests it; if not granted, this listener just receives nothing).
+      const stage = root.querySelector('.demo-stage');
+      const mockup = root.closest('.phone-mockup') || root;
+
+      const mqMobile = window.matchMedia('(max-width: 768px)');
+
+      if (!mqMobile.matches) {
+        mockup.addEventListener('mousemove', (e) => {
+          const r = mockup.getBoundingClientRect();
+          const dx = (e.clientX - (r.left + r.width / 2)) / r.width;
+          const dy = (e.clientY - (r.top + r.height / 2)) / r.height;
+          stage.style.setProperty('--demo-tx', `${dx * -8}px`);
+          stage.style.setProperty('--demo-ty', `${dy * -5}px`);
+        });
+        mockup.addEventListener('mouseleave', () => {
+          stage.style.setProperty('--demo-tx', '0px');
+          stage.style.setProperty('--demo-ty', '0px');
+        });
+      } else {
+        window.addEventListener('deviceorientation', (e) => {
+          if (e.gamma == null) return;
+          const g = Math.max(-30, Math.min(30, e.gamma));
+          const b = Math.max(-30, Math.min(30, (e.beta || 0) - 25));
+          stage.style.setProperty('--demo-tx', `${g * -0.25}px`);
+          stage.style.setProperty('--demo-ty', `${b * -0.18}px`);
+        }, { passive: true });
+      }
+    })();
+
+    // -------- Touch glow (mobile only) --------
+    (() => {
+      const mqMobile = window.matchMedia('(max-width: 768px)');
+      if (!mqMobile.matches) return;
+
+      const glow  = document.getElementById('touchGlow');
+      const trail = document.getElementById('touchGlowTrail');
+      if (!glow || !trail) return;
+
+      let tx = -100, ty = -100;
+      let trailX = tx, trailY = ty;
+      let active = false;
+      let fadeTimeout = null;
+
+      const place = (el, x, y) => {
+        el.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
+      };
+
+      const setActive = (on) => {
+        active = on;
+        if (on) {
+          if (fadeTimeout) { clearTimeout(fadeTimeout); fadeTimeout = null; }
+          document.body.classList.add('touch-active');
+        } else {
+          // Slight delay so a quick tap doesn't snap off mid-fade
+          fadeTimeout = setTimeout(() => {
+            document.body.classList.remove('touch-active');
+          }, 80);
+        }
+      };
+
+      const readTouch = (e) => {
+        const t = e.touches && e.touches[0];
+        if (!t) return;
+        tx = t.clientX;
+        ty = t.clientY;
+        place(glow, tx, ty);
+      };
+
+      // passive: true → never preventDefault, never blocks scroll/panorama drags
+      window.addEventListener('touchstart', (e) => { setActive(true); readTouch(e); }, { passive: true });
+      window.addEventListener('touchmove',  readTouch, { passive: true });
+      window.addEventListener('touchend',    () => setActive(false), { passive: true });
+      window.addEventListener('touchcancel', () => setActive(false), { passive: true });
+
+      const tick = () => {
+        // Eased trail — feels like a soft luminous wake under the finger
+        trailX += (tx - trailX) * 0.22;
+        trailY += (ty - trailY) * 0.22;
+        place(trail, trailX, trailY);
+        requestAnimationFrame(tick);
+      };
+      tick();
+    })();
+
+    // Before/After Slider
+    const sliderContainer = document.querySelector('.slider-container');
+    const sliderOverlay = document.getElementById('sliderOverlay');
+    const sliderHandle = document.getElementById('sliderHandle');
+    let isDragging = false;
+    
+    function updateSlider(clientX) {
+      if (!sliderContainer) return;
+      
+      const rect = sliderContainer.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+      
+      if (sliderOverlay) sliderOverlay.style.width = percentage + '%';
+      if (sliderHandle) sliderHandle.style.left = percentage + '%';
+    }
+    
+    // Mouse events
+    sliderContainer.addEventListener('mousedown', () => { isDragging = true; });
+    document.addEventListener('mouseup', () => { isDragging = false; });
+    sliderContainer.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      updateSlider(e.clientX);
+    });
+    
+    // Touch events
+    sliderContainer.addEventListener('touchstart', () => { isDragging = true; });
+    document.addEventListener('touchend', () => { isDragging = false; });
+    sliderContainer.addEventListener('touchmove', (e) => {
+      if (!isDragging || !e.touches[0]) return;
+      updateSlider(e.touches[0].clientX);
+    });
+    
+    // Initialize slider at 50%
+    setTimeout(() => {
+      if (sliderOverlay) sliderOverlay.style.width = '50%';
+      if (sliderHandle) sliderHandle.style.left = '50%';
+    }, 100);
+    
+    // Form handling
+    document.getElementById('waitlistForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      alert('Thank you! You\'re on the waitlist. Check your inbox for updates.');
+      this.reset();
+    });
+    
+    // Scroll to waitlist function
+    function scrollToWaitlist() {
+      document.getElementById('waitlist').scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    // Smooth scroll for navbar links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        const href = this.getAttribute('href');
+        if (href !== '#' && document.querySelector(href)) {
+          e.preventDefault();
+          document.querySelector(href).scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      });
+    });
+  </script>
+
+  <!-- 360° Hero Panorama (inline + fullscreen) -->
+  <script type="module">
+    import { Viewer } from '@photo-sphere-viewer/core';
+    import { GyroscopePlugin } from '@photo-sphere-viewer/gyroscope-plugin';
+
+    const PANORAMA_SRC = './assets/imagem-ambiente-360.jpg';
+
+    const inlineContainer = document.getElementById('heroPanorama');
+    const fsContainer = document.getElementById('heroPanoramaFs');
+    const fsOverlay = document.getElementById('panoramaFullscreen');
+    const gyroBtn = document.getElementById('gyroBtn');
+    const gyroLabel = document.getElementById('gyroBtnLabel');
+    const exitBtn = document.getElementById('exit360Btn');
+    const fsGyroBtn = document.getElementById('fsGyroBtn');
+    const fsGyroLabel = document.getElementById('fsGyroLabel');
+
+    if (!inlineContainer) {
+      // Hero panorama not on this page — skip.
+    } else {
+      const hasDeviceOrientation = 'DeviceOrientationEvent' in window;
+      const needsPermission =
+        hasDeviceOrientation &&
+        typeof DeviceOrientationEvent.requestPermission === 'function';
+      const isLikelyMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const gyroSupported = hasDeviceOrientation && isLikelyMobile;
+
+      const mqMobile = window.matchMedia('(max-width: 768px)');
+      const isMobileViewport = () => mqMobile.matches;
+
+      const viewerOpts = {
+        panorama: PANORAMA_SRC,
+        caption: '',
+        loadingImg: null,
+        loadingTxt: '',
+        navbar: false,
+        defaultZoomLvl: isMobileViewport() ? 40 : 30,
+        mousewheel: false,
+        touchmoveTwoFingers: false,
+        // Smooth, slightly damped feel for premium / cinematic motion
+        moveInertia: true,
+        moveSpeed: isMobileViewport() ? 0.7 : 1,
+      };
+
+      const gyroPluginOpts = { touchmove: true, absolutePosition: false, moveMode: 'smooth' };
+
+      // --- Inline viewer ---
+      let inlineViewer = null;
+      let inlineGyro = null;
+      try {
+        inlineViewer = new Viewer({
+          ...viewerOpts,
+          container: inlineContainer,
+          plugins: [[GyroscopePlugin, gyroPluginOpts]],
+        });
+        inlineGyro = inlineViewer.getPlugin(GyroscopePlugin);
+      } catch (err) {
+        console.warn('Inline panorama failed to initialize:', err);
+      }
+
+      // Marks the wrapper as "gyroscope active" so the hint can gracefully fade.
+      const panoramaWrapper = inlineContainer.parentElement; // .panorama-wrapper
+      const markGyroOn = () => panoramaWrapper && panoramaWrapper.classList.add('gyro-on');
+
+      // iOS requires a user-gesture-gated permission call. Memoize the promise
+      // so a single tap can drive both inline + fullscreen gyros without
+      // double-prompting the user.
+      let permissionPromise = null;
+      const ensurePermission = () => {
+        if (!needsPermission) return Promise.resolve(true);
+        if (permissionPromise) return permissionPromise;
+        permissionPromise = DeviceOrientationEvent.requestPermission()
+          .then((state) => state === 'granted')
+          .catch(() => false);
+        return permissionPromise;
+      };
+
+      // Activate inline gyroscope. On iOS this must run inside a user gesture.
+      let inlineGyroActive = false;
+      const startInlineGyro = async () => {
+        if (!inlineGyro || inlineGyroActive) return false;
+        const ok = await ensurePermission();
+        if (!ok) return false;
+        try {
+          inlineGyro.start();
+          inlineGyroActive = true;
+          markGyroOn();
+          return true;
+        } catch (err) {
+          console.warn('Inline gyroscope unavailable:', err);
+          return false;
+        }
+      };
+
+      // Auto-start on mobile.
+      // - Android / browsers that don't gate the API: start right away.
+      // - iOS: wait for the very first user gesture (viewer or hint badge).
+      if (gyroSupported && isMobileViewport()) {
+        if (!needsPermission) {
+          // Defer a tick so the viewer's renderer is ready
+          setTimeout(() => { startInlineGyro(); }, 250);
+        } else {
+          const firstGesture = () => { startInlineGyro(); };
+          inlineContainer.addEventListener('pointerdown', firstGesture, { once: true, passive: true });
+          if (gyroBtn) gyroBtn.addEventListener('pointerdown', firstGesture, { once: true, passive: true });
+        }
+        // Hint settles after a few seconds even if user hasn't moved the phone,
+        // so the UI feels calm rather than nagging.
+        setTimeout(() => markGyroOn(), 6000);
+      }
+
+      // Cursor feedback on inline viewer
+      const setInlineDragging = (on) => inlineContainer.classList.toggle('is-dragging', on);
+      inlineContainer.addEventListener('mousedown', () => setInlineDragging(true));
+      window.addEventListener('mouseup', () => setInlineDragging(false));
+      inlineContainer.addEventListener('mouseleave', () => setInlineDragging(false));
+
+      // Inline badge label: desktop vs mobile
+      const updateBadgeIdleLabel = () => {
+        if (!gyroLabel) return;
+        gyroLabel.textContent = gyroSupported
+          ? 'Move your phone to explore'
+          : 'Drag to explore';
+      };
+      updateBadgeIdleLabel();
+
+      // --- Fullscreen viewer (created on demand, destroyed on close) ---
+      let fsViewer = null;
+      let fsGyro = null;
+      let fsGyroActive = false;
+
+      const setFsGyroState = (on) => {
+        fsGyroActive = on;
+        fsGyroBtn.classList.toggle('is-active', on);
+        fsGyroBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        if (fsGyroLabel) fsGyroLabel.textContent = on ? 'Gyroscope on' : 'Enable gyroscope';
+      };
+
+      const enableFsGyro = async () => {
+        if (!fsGyro) return;
+        const ok = await ensurePermission();
+        if (!ok) {
+          if (fsGyroLabel) fsGyroLabel.textContent = 'Permission denied';
+          return;
+        }
+        try {
+          fsGyro.start();
+          setFsGyroState(true);
+        } catch (err) {
+          console.warn('Gyroscope unavailable:', err);
+          if (fsGyroLabel) fsGyroLabel.textContent = 'Gyroscope unavailable';
+        }
+      };
+
+      const disableFsGyro = () => {
+        if (fsGyro) {
+          try { fsGyro.stop(); } catch (_) {}
+        }
+        setFsGyroState(false);
+      };
+
+      const setFsDragging = (on) => fsContainer.classList.toggle('is-dragging', on);
+      fsContainer.addEventListener('mousedown', () => setFsDragging(true));
+      window.addEventListener('mouseup', () => setFsDragging(false));
+      fsContainer.addEventListener('mouseleave', () => setFsDragging(false));
+
+      fsGyroBtn.addEventListener('click', () => {
+        if (fsGyroActive) disableFsGyro();
+        else enableFsGyro();
+      });
+
+      // --- Open / close fullscreen ---
+      const openFullscreen = async () => {
+        if (fsOverlay.classList.contains('is-open')) return;
+        fsOverlay.classList.add('is-open');
+        fsOverlay.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('panorama-locked');
+
+        try {
+          fsViewer = new Viewer({
+            ...viewerOpts,
+            container: fsContainer,
+            plugins: [[GyroscopePlugin, gyroPluginOpts]],
+          });
+          fsGyro = fsViewer.getPlugin(GyroscopePlugin);
+        } catch (err) {
+          console.warn('Fullscreen panorama failed to initialize:', err);
+        }
+
+        if (gyroSupported) {
+          fsGyroBtn.classList.add('is-visible');
+          setFsGyroState(false);
+          // The user click that opened fullscreen also satisfies iOS' user-gesture
+          // requirement, so try to enable gyro automatically.
+          enableFsGyro();
+        } else {
+          fsGyroBtn.classList.remove('is-visible');
+        }
+      };
+
+      const closeFullscreen = () => {
+        if (!fsOverlay.classList.contains('is-open')) return;
+        if (fsGyroActive) disableFsGyro();
+        if (fsViewer) {
+          try { fsViewer.destroy(); } catch (_) {}
+          fsViewer = null;
+          fsGyro = null;
+        }
+        fsOverlay.classList.remove('is-open');
+        fsOverlay.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('panorama-locked');
+        fsGyroBtn.classList.remove('is-visible');
+
+        // After fullscreen, gyroscope permission may have just been granted —
+        // make sure the inline mobile viewer takes advantage of it.
+        if (gyroSupported && isMobileViewport()) startInlineGyro();
+      };
+
+      // A real "click" on the inline viewer (not a drag-to-pan) opens fullscreen.
+      // Track pointer movement and only treat near-stationary releases as clicks.
+      const CLICK_THRESHOLD_PX = 8;
+      let downX = 0, downY = 0, downValid = false;
+      inlineContainer.addEventListener('pointerdown', (e) => {
+        downX = e.clientX; downY = e.clientY; downValid = true;
+      });
+      inlineContainer.addEventListener('pointerup', (e) => {
+        if (!downValid) return;
+        downValid = false;
+        const dx = Math.abs(e.clientX - downX);
+        const dy = Math.abs(e.clientY - downY);
+        if (dx < CLICK_THRESHOLD_PX && dy < CLICK_THRESHOLD_PX) openFullscreen();
+      });
+      inlineContainer.addEventListener('pointercancel', () => { downValid = false; });
+
+      // Prompt card and gyro badge act as explicit CTAs to enter the immersive view.
+      const promptCard = document.querySelector('.panorama-overlays .absolute.bottom-6.left-6');
+      if (promptCard) {
+        promptCard.style.cursor = 'pointer';
+        promptCard.addEventListener('click', (e) => { e.stopPropagation(); openFullscreen(); });
+      }
+      if (gyroBtn) {
+        gyroBtn.addEventListener('click', (e) => { e.stopPropagation(); openFullscreen(); });
+      }
+
+      exitBtn.addEventListener('click', closeFullscreen);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeFullscreen();
+      });
+
+      // Clean up on page unload
+      window.addEventListener('beforeunload', () => {
+        if (inlineViewer) { try { inlineViewer.destroy(); } catch (_) {} }
+        if (fsViewer) { try { fsViewer.destroy(); } catch (_) {} }
+      });
+    }
+  </script>
+</body>
+</html>
