@@ -12,3 +12,6 @@ ChatGPT Image *.png
 
 # Config local do Claude Code
 .claude/
+
+# Build artifacts (ZIP de deploy)
+dist/

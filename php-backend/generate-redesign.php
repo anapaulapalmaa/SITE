@@ -99,7 +99,14 @@ The output should preserve the original panoramic perspective and be suitable fo
 
 Do not crop the scene into a square composition.
 
-Maintain a wide panoramic field of view.
+Strict framing rules:
+- The output must be a wide panoramic image.
+- Preserve the panoramic field of view of the input; do not zoom into a narrow part of the room.
+- Produce a single coherent wide interior scene suitable for 360° viewing.
+- Fill the entire frame with real, continuous architectural content edge to edge.
+- Do NOT add blurred side filling, vignettes or dark borders.
+- Do NOT stretch, smear or duplicate pixels at the edges to widen the image.
+- Avoid artificial stretched borders or out-of-focus padding of any kind.
 
 Preserve room geometry and spatial continuity.
 
@@ -150,8 +157,8 @@ if (!$b64) {
 }
 $imageBinary = base64_decode($b64);
 
-// ---- Expansão para panorama ~2:1 (ambient fill via Imagick) ----
-list($panoBinary, $w, $h, $expanded) = toPanorama($imageBinary);
+// ---- Preparação do panorama (sem blur/stretch/fill agressivo) ----
+list($panoBinary, $w, $h, $isPanoramic) = preparePanorama($imageBinary);
 
 // ---- Consome 1 crédito (somente após geração bem-sucedida) ----
 // Guard atômico: o UPDATE só decrementa se ainda houver crédito, evitando
@@ -169,61 +176,77 @@ $pdo->prepare('INSERT INTO generations (user_id, created_at, prompt) VALUES (:ui
 
 $creditsLeft = max(0, (int) $user['credits_remaining'] - 1);
 
+$aspect = $h > 0 ? round($w / $h, 3) : 0;
+
 echo json_encode([
     'imageUrl' => 'data:image/png;base64,' . base64_encode($panoBinary),
     'mimeType' => 'image/png',
     'fileName' => 'arch3-panorama.png',
     'width' => $w,
     'height' => $h,
-    'expanded' => $expanded,
-    'expansionStrategy' => 'ambient-php',
+    'aspect' => $aspect,
+    // true => panorama 360 real (abre direto no viewer).
+    // false => não panorâmico: frontend mostra aviso honesto + 360 opcional.
+    'panoramic' => $isPanoramic,
+    'notice' => $isPanoramic ? null : 'For best 360° results, upload a complete panoramic photo.',
     'provider' => 'openai',
     'credits_remaining' => $creditsLeft,
 ]);
 
 /**
- * Replica a estratégia "ambient fill": centro nítido (redesign real) +
- * laterais ambiente desfocadas/escurecidas, num canvas 2:1.
- * Se Imagick não existir, devolve a imagem original (degrada com elegância).
+ * Política de panorama SEM preenchimento artificial agressivo.
+ *
+ * Antes, imagens não-panorâmicas eram coladas no centro de um canvas 2:1 com
+ * fundo desfocado/escurecido — o que gerava as faixas borradas nas laterais.
+ * Isso foi removido. Agora:
+ *
+ *   - Aspecto >= PANO_OK  -> panorama 360 de verdade: só normaliza para PNG.
+ *   - Aspecto <  PANO_OK  -> NÃO expande com blur/stretch. Devolve a imagem
+ *                            limpa, no aspecto nativo, marcada como
+ *                            não-panorâmica. O frontend mostra um aviso honesto
+ *                            e oferece o 360 opcional (campo de visão parcial,
+ *                            sem distorção e sem bordas borradas).
+ *
+ * A expansão real das laterais (outpainting) fica em expandPanoramaOutpaint()
+ * — preparada para o futuro, intencionalmente NÃO usada aqui.
+ *
+ * @return array{0:string,1:int,2:int,3:bool} [pngBinary, width, height, isPanoramic]
  */
-function toPanorama($pngBinary) {
+function preparePanorama($pngBinary) {
+    $PANO_OK = 1.9; // a partir daqui consideramos um panorama 360 real
+
     if (!extension_loaded('imagick')) {
         $size = @getimagesizefromstring($pngBinary);
-        return [$pngBinary, $size[0] ?? 0, $size[1] ?? 0, false];
+        $w = $size[0] ?? 0;
+        $h = $size[1] ?? 0;
+        $aspect = $h > 0 ? $w / $h : 0;
+        return [$pngBinary, $w, $h, $aspect >= $PANO_OK];
     }
 
     $im = new Imagick();
     $im->readImageBlob($pngBinary);
     $w = $im->getImageWidth();
     $h = $im->getImageHeight();
-    $aspect = $h > 0 ? $w / $h : 1;
+    $aspect = $h > 0 ? $w / $h : 0;
 
-    // Já panorâmico o suficiente: normaliza para PNG e retorna.
-    if ($aspect >= 1.9) {
-        $im->setImageFormat('png');
-        $out = $im->getImageBlob();
-        $im->clear();
-        return [$out, $w, $h, false];
-    }
+    // Sempre devolve a imagem nativa, apenas normalizada para PNG.
+    // Nenhum blur, nenhum stretch, nenhuma faixa lateral.
+    $im->setImageFormat('png');
+    $out = $im->getImageBlob();
+    $im->clear();
 
-    $targetH = $h;
-    $targetW = (int) round($h * 2);
+    return [$out, $w, $h, $aspect >= $PANO_OK];
+}
 
-    // Fundo ambiente: cobre o canvas (cover + crop central), desfoca e escurece.
-    $bg = clone $im;
-    $bg->cropThumbnailImage($targetW, $targetH);      // escala "cover" + corta centralizado
-    $bg->gaussianBlurImage(0, 22);                    // desfoque forte
-    $bg->modulateImage(52, 100, 100);                 // brilho ~52% (escurece)
-
-    // Primeiro plano: o redesign real, altura cheia, centralizado e nítido.
-    $fgW = (int) round($targetH * $aspect);
-    $fg = clone $im;
-    $fg->resizeImage($fgW, $targetH, Imagick::FILTER_LANCZOS, 1);
-    $x = (int) round(($targetW - $fgW) / 2);
-    $bg->compositeImage($fg, Imagick::COMPOSITE_OVER, $x, 0);
-
-    $bg->setImageFormat('png');
-    $out = $bg->getImageBlob();
-    $im->clear(); $fg->clear(); $bg->clear();
-    return [$out, $targetW, $targetH, true];
+/**
+ * (FUTURO — stub) Expansão real das laterais por outpainting.
+ *
+ * Objetivo: pedir à API de imagem que ESTENDA a cena para os lados de forma
+ * coerente (mesma sala, mesma iluminação, mesma perspectiva), produzindo um
+ * equiretangular ~2:1 — sem blur, sem stretch e sem bordas artificiais.
+ *
+ * Mantido como stub: NÃO é chamado hoje. Lança exceção se invocado por engano.
+ */
+function expandPanoramaOutpaint($pngBinary, array $opts = []) {
+    throw new RuntimeException('Real side outpainting is not implemented yet.');
 }

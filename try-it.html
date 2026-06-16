@@ -311,6 +311,8 @@
     }
     .stage-placeholder h3 { font-size: 22px; max-width: 16ch; margin: 0 auto; color: #fff; }
     .stage-preview-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    /* Honest, non-panoramic result: show the full frame without cropping or stretching. */
+    .stage-preview-img.is-contain { object-fit: contain; background: #07091a; }
     .stage-preview-tag {
       position: absolute; left: 14px; top: 14px; z-index: 3;
       padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700;
@@ -772,6 +774,12 @@
 
           <!-- Exit fullscreen button (visible only in fullscreen) -->
           <button class="btn-secondary exit-fs-btn" id="exitFsButton" type="button">✕ Exit 360°</button>
+        </div>
+
+        <!-- Honest notice when the result is not a true panorama (no blur fill) -->
+        <div class="callout" id="panoNotice" style="margin-top:14px; display:none; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;" hidden>
+          <span id="panoNoticeText" style="flex:1; min-width:200px;">For best 360° results, upload a complete panoramic photo.</span>
+          <button class="btn-secondary" id="view360Btn" type="button" style="white-space:nowrap;">View in 360°</button>
         </div>
 
         <p class="helper-text" id="viewerHint" style="margin-top: 14px;" hidden>
@@ -1238,6 +1246,9 @@
     const exitFsButton = document.getElementById('exitFsButton');
     const viewerHint = document.getElementById('viewerHint');
     const resultTitle = document.getElementById('resultTitle');
+    const panoNotice = document.getElementById('panoNotice');
+    const panoNoticeText = document.getElementById('panoNoticeText');
+    const view360Btn = document.getElementById('view360Btn');
 
     const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
 
@@ -1248,6 +1259,10 @@
     let viewer = null;
     let gyroPlugin = null;
     let gyroEnabled = false;
+    let lastResultUrl = '';
+
+    const hidePanoNotice = () => { panoNotice.hidden = true; panoNotice.style.display = 'none'; };
+    const showPanoNotice = () => { panoNotice.hidden = false; panoNotice.style.display = 'flex'; };
 
     const setError = (message) => {
       uploadError.hidden = !message;
@@ -1266,12 +1281,15 @@
 
       // Mirror the upload into the result stage (before generation)
       destroyViewer();
+      hidePanoNotice();
+      view360Btn.hidden = true;
       viewerMount.hidden = true;
       gyroButton.hidden = true;
       fullscreenButton.hidden = true;
       viewerHint.hidden = true;
       stagePlaceholder.hidden = true;
       stagePreviewImg.hidden = false;
+      stagePreviewImg.classList.remove('is-contain');
       stagePreviewImg.src = previewUrl;
       stagePreviewTag.hidden = false;
       stagePreviewTag.textContent = 'Your upload';
@@ -1305,11 +1323,15 @@
       dropzoneEmpty.hidden = false;
       dropzonePreview.hidden = true;
       destroyViewer();
+      hidePanoNotice();
+      view360Btn.hidden = true;
+      lastResultUrl = '';
       viewerMount.hidden = true;
       gyroButton.hidden = true;
       fullscreenButton.hidden = true;
       viewerHint.hidden = true;
       stagePreviewImg.hidden = true;
+      stagePreviewImg.classList.remove('is-contain');
       stagePreviewTag.hidden = true;
       stagePlaceholder.hidden = false;
       resultTitle.textContent = 'Your spatial preview';
@@ -1334,6 +1356,8 @@
       loadingStep.textContent = loadingSteps[0];
       loadingBar.style.width = '8%';
       loadingOverlay.hidden = false;
+      hidePanoNotice();
+      view360Btn.hidden = true;
       stagePlaceholder.hidden = true;
       loadingTimer = window.setInterval(() => {
         loadingIndex = Math.min(loadingIndex + 1, loadingSteps.length - 1);
@@ -1354,15 +1378,53 @@
       viewer = null; gyroPlugin = null; gyroEnabled = false;
     };
 
-    const mountViewer = (imageUrl) => {
+    // For a NON-panoramic image, place it honestly inside a partial field of
+    // view (~135° × 90°) instead of stretching it across the full sphere. The
+    // uncovered area stays as the neutral stage background — no blur, no smear.
+    const computePanoData = (image) => {
+      const w = image.naturalWidth || image.width;
+      const h = image.naturalHeight || image.height;
+      const fullHeight = h * 2;          // image spans ~90° vertically
+      const fullWidth = fullHeight * 2;  // equirectangular is always 2:1
+      return {
+        fullWidth, fullHeight,
+        croppedWidth: w, croppedHeight: h,
+        croppedX: Math.round((fullWidth - w) / 2),
+        croppedY: Math.round((fullHeight - h) / 2),
+      };
+    };
+
+    // Honest fallback: show a clean, full-frame flat image (no cropping, no
+    // stretching) plus the panoramic-photo tip and an opt-in 360 button.
+    const showFlatResult = (imageUrl, notice) => {
       destroyViewer();
+      viewerMount.hidden = true;
+      gyroButton.hidden = true;
+      fullscreenButton.hidden = true;
+      viewerHint.hidden = true;
+      stagePlaceholder.hidden = true;
+      stagePreviewImg.hidden = false;
+      stagePreviewImg.classList.add('is-contain');
+      stagePreviewImg.src = imageUrl;
+      stagePreviewTag.hidden = false;
+      stagePreviewTag.textContent = 'Redesign';
+      resultTitle.textContent = 'Your redesign';
+      panoNoticeText.textContent = notice || 'For best 360° results, upload a complete panoramic photo.';
+      view360Btn.hidden = false;
+      showPanoNotice();
+    };
+
+    const mountViewer = (imageUrl, cropped = false) => {
+      destroyViewer();
+      hidePanoNotice();
       stagePreviewImg.hidden = true;
+      stagePreviewImg.classList.remove('is-contain');
       stagePreviewTag.hidden = true;
       stagePlaceholder.hidden = true;
       viewerMount.hidden = false;
       resultTitle.textContent = 'Explore your redesign';
 
-      viewer = new Viewer({
+      const config = {
         container: viewerMount,
         panorama: imageUrl,
         navbar: false,
@@ -1374,7 +1436,10 @@
         moveInertia: true,
         moveSpeed: isMobile() ? 0.7 : 1,
         plugins: [[GyroscopePlugin, { touchmove: true, absolutePosition: false, moveMode: 'smooth' }]],
-      });
+      };
+      // Partial-FOV placement for non-panoramic images (avoids full-sphere stretch).
+      if (cropped) config.panoData = computePanoData;
+      viewer = new Viewer(config);
 
       gyroPlugin = viewer.getPlugin(GyroscopePlugin);
       viewerHint.hidden = false;
@@ -1405,6 +1470,11 @@
       }
     };
     gyroButton.addEventListener('click', enableGyro);
+
+    // Opt-in 360 for a non-panoramic result: partial field of view, no stretch.
+    view360Btn.addEventListener('click', () => {
+      if (lastResultUrl) mountViewer(lastResultUrl, true);
+    });
 
     // ---------- Fullscreen ----------
     const enterFullscreen = () => {
@@ -1488,16 +1558,28 @@
 
         loadingStep.textContent = loadingSteps[loadingSteps.length - 1];
         loadingBar.style.width = '100%';
-        mountViewer(payload.imageUrl);
+        lastResultUrl = payload.imageUrl;
+        // Real panorama -> open the 360 viewer directly.
+        // Not panoramic -> show an honest clean image + tip (no blurred fill).
+        if (payload.panoramic === false) {
+          showFlatResult(payload.imageUrl, payload.notice);
+        } else {
+          mountViewer(payload.imageUrl);
+        }
         if (window.Arch3 && typeof payload.credits_remaining === 'number') {
           window.Arch3.setCredits(payload.credits_remaining);
         }
       } catch (error) {
         setError(error instanceof Error ? error.message : 'Generation failed.');
         // Fall back to showing the upload again if there was one
+        hidePanoNotice();
+        view360Btn.hidden = true;
         if (selectedFile && previewUrl) {
+          stagePreviewImg.classList.remove('is-contain');
+          stagePreviewImg.src = previewUrl;
           stagePreviewImg.hidden = false;
           stagePreviewTag.hidden = false;
+          stagePreviewTag.textContent = 'Your upload';
         } else {
           stagePlaceholder.hidden = false;
         }
