@@ -411,10 +411,185 @@
         box-shadow: 0 0 60px rgba(139, 92, 246, 0.4);
       }
     }
+    /* -------- Account chip (navbar) -------- */
+    .account-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 8px 7px 14px;
+      border-radius: 9999px;
+      background: rgba(15, 18, 42, 0.6);
+      border: 1px solid rgba(139, 92, 246, 0.35);
+      backdrop-filter: blur(14px);
+      font-size: 13px;
+      color: var(--text-soft);
+    }
+    .account-chip .acc-credits { color: #fff; font-weight: 700; }
+    .account-chip .acc-credits b {
+      background: linear-gradient(90deg, #A78BFA, #3B82F6);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+    }
+    .acc-avatar {
+      width: 30px; height: 30px; border-radius: 50%;
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, #8B5CF6, #3B82F6);
+      color: #fff; font-weight: 700; font-size: 13px;
+      cursor: pointer; flex: none;
+    }
+    .acc-menu {
+      position: absolute; right: 0; top: calc(100% + 10px);
+      min-width: 220px; padding: 8px;
+      background: var(--glass-strong);
+      border: 1px solid var(--line-strong);
+      border-radius: 18px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.45);
+      display: none; z-index: 60;
+    }
+    .acc-menu.is-open { display: block; }
+    .acc-menu .acc-name { padding: 8px 12px; color:#fff; font-weight:600; font-size:14px; }
+    .acc-menu .acc-email { padding: 0 12px 8px; color: var(--text-muted); font-size: 12px; word-break: break-all; }
+    .acc-menu .acc-divider { height:1px; background: var(--line-soft); margin: 6px 0; }
+    .acc-menu button, .acc-menu a {
+      display:block; width:100%; text-align:left;
+      padding: 9px 12px; border-radius: 12px;
+      background: transparent; border: none; color: var(--text-soft);
+      font-size: 13.5px; cursor: pointer; text-decoration: none;
+    }
+    .acc-menu button:hover, .acc-menu a:hover { background: rgba(139,92,246,0.14); color:#fff; }
+
+    /* -------- Credits bar (top of Try It) -------- */
+    .credits-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 18px; flex-wrap: wrap;
+      padding: 16px 22px; margin-top: 28px;
+    }
+    .credits-bar .cb-stat { display: flex; flex-direction: column; gap: 2px; }
+    .credits-bar .cb-label {
+      text-transform: uppercase; letter-spacing: 0.14em; font-size: 10.5px;
+      font-weight: 700; color: var(--accent-purple);
+    }
+    .credits-bar .cb-value { font-size: 22px; font-weight: 800; color: #fff; line-height: 1.1; }
+    .credits-bar .cb-value.gradient-text { font-weight: 800; }
+    .credits-bar .cb-divider { width:1px; align-self:stretch; background: var(--line-soft); }
+    .credits-bar .cb-actions { display:flex; gap:10px; flex-wrap: wrap; }
+
+    /* -------- Modals -------- */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      display: none; align-items: center; justify-content: center;
+      padding: 24px;
+      background: rgba(3, 5, 14, 0.72);
+      backdrop-filter: blur(10px);
+      overflow-y: auto;
+    }
+    .modal-overlay.is-open { display: flex; }
+    .modal-card {
+      position: relative;
+      width: 100%; max-width: 460px;
+      background: var(--glass-strong);
+      border: 1px solid var(--line-strong);
+      border-radius: 28px;
+      backdrop-filter: blur(24px);
+      box-shadow: 0 30px 100px rgba(0,0,0,0.5), 0 0 0 1px rgba(139,92,246,0.12);
+      padding: 32px;
+      margin: auto;
+    }
+    .modal-card.is-wide { max-width: 1000px; }
+    .modal-close {
+      position: absolute; right: 18px; top: 18px;
+      width: 34px; height: 34px; border-radius: 50%;
+      display: grid; place-items: center;
+      background: rgba(255,255,255,0.06); border: 1px solid var(--line-soft);
+      color: var(--text-soft); cursor: pointer; font-size: 16px; line-height: 1;
+    }
+    .modal-close:hover { color:#fff; background: rgba(255,255,255,0.12); }
+
+    .auth-tabs { display:flex; gap:6px; padding:5px; border-radius:14px; background: rgba(255,255,255,0.05); margin: 18px 0 22px; }
+    .auth-tabs button {
+      flex:1; padding:10px; border-radius:10px; border:none; cursor:pointer;
+      background: transparent; color: var(--text-muted); font-weight:600; font-size:14px;
+      transition: all .2s ease;
+    }
+    .auth-tabs button.is-active { background: linear-gradient(90deg, #8B5CF6, #3B82F6); color:#fff; box-shadow: 0 0 20px rgba(139,92,246,0.4); }
+
+    .auth-field { margin-bottom: 14px; }
+    .auth-input {
+      width:100%; box-sizing:border-box;
+      padding: 13px 15px; border-radius: 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(148,163,184,0.18);
+      color:#fff; font: inherit; outline: none;
+    }
+    .auth-input::placeholder { color: rgba(203,213,225,0.5); }
+    .auth-input:focus { border-color:#8B5CF6; box-shadow: 0 0 0 3px rgba(139,92,246,0.18); }
+    .auth-error { color:#fca5a5; font-size:13.5px; margin-top: 4px; min-height: 0; }
+    .auth-switch { text-align:center; margin-top:16px; font-size:13.5px; color: var(--text-muted); }
+    .auth-switch button { background:none; border:none; color: var(--accent-purple); font-weight:600; cursor:pointer; }
+
+    /* -------- Pricing -------- */
+    .pricing-grid {
+      display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:18px;
+      align-items: stretch;
+    }
+    .plan-card {
+      display:flex; flex-direction:column;
+      padding: 26px 22px; border-radius: 24px;
+      background: var(--glass-card);
+      border: 1px solid var(--line-soft);
+      backdrop-filter: blur(18px);
+      position: relative;
+      transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+    }
+    .plan-card:hover { transform: translateY(-4px); border-color: var(--line-strong); box-shadow: 0 24px 60px rgba(139,92,246,0.16); }
+    .plan-card.is-pro {
+      border-color: rgba(168,85,247,0.55);
+      box-shadow: 0 24px 80px rgba(139,92,246,0.22);
+      background: linear-gradient(180deg, rgba(40,30,80,0.6), rgba(15,18,42,0.86));
+    }
+    .plan-card.is-current { outline: 1px solid rgba(59,130,246,0.5); }
+    .plan-badge {
+      position:absolute; top:-11px; left:50%; transform:translateX(-50%);
+      padding: 4px 14px; border-radius:9999px; font-size:10.5px; font-weight:800;
+      letter-spacing:0.1em; text-transform:uppercase;
+      background: linear-gradient(90deg, #8B5CF6, #3B82F6); color:#fff;
+      box-shadow: 0 0 20px rgba(139,92,246,0.5); white-space:nowrap;
+    }
+    .plan-name { font-family:'Playfair Display',serif; font-size:20px; font-weight:700; color:#fff; margin-bottom:4px; }
+    .plan-price { font-size:34px; font-weight:800; color:#fff; line-height:1.1; }
+    .plan-price small { font-size:14px; font-weight:600; color: var(--text-muted); }
+    .plan-gens { color: var(--accent-purple); font-weight:700; font-size:14px; margin:10px 0 14px; }
+    .plan-features { list-style:none; padding:0; margin:0 0 20px; display:grid; gap:8px; }
+    .plan-features li { font-size:13px; color: var(--text-soft); padding-left:22px; position:relative; line-height:1.5; }
+    .plan-features li::before { content:"✓"; position:absolute; left:0; top:0; color: var(--accent-purple-strong); font-weight:800; }
+    .plan-card .btn-primary, .plan-card .btn-secondary { margin-top:auto; width:100%; justify-content:center; }
+
+    /* -------- Toast -------- */
+    .toast {
+      position: fixed; left:50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
+      z-index: 1200; max-width: 90vw;
+      padding: 14px 22px; border-radius: 14px;
+      background: var(--glass-strong); border:1px solid var(--line-strong);
+      color:#fff; font-size:14px; font-weight:500;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+      opacity: 0; pointer-events: none; transition: all .3s ease;
+    }
+    .toast.is-show { opacity:1; transform: translateX(-50%) translateY(0); }
+    .toast.is-error { border-color: rgba(239,68,68,0.5); }
+
+    .lockout-msg { color: var(--text-soft); font-size:15px; line-height:1.65; max-width: 60ch; margin: 8px auto 0; text-align:center; }
+
+    @media (max-width: 900px) {
+      .pricing-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
     @media (max-width: 768px) {
       .custom-cursor, .custom-cursor-trail { display: none; }
       .tryit-grid { grid-template-columns: 1fr; }
       .page-shell { padding: 40px 16px 72px; }
+      .pricing-grid { grid-template-columns: 1fr; }
+      .credits-bar { justify-content: center; text-align:center; }
+      .credits-bar .cb-divider { display:none; }
     }
   </style>
 </head>
@@ -436,7 +611,30 @@
         <a href="index.html#roadmap" class="transition">Roadmap</a>
         <a href="index.html#about" class="transition">About</a>
       </div>
-      <a href="#try-tool" class="btn-primary text-sm">TRY IT! <span>→</span></a>
+      <div class="relative" id="accountArea">
+        <!-- Logged-out state -->
+        <button class="btn-primary text-sm" id="navSignIn">Sign in <span>→</span></button>
+        <!-- Logged-in state (filled by JS) -->
+        <div class="account-chip" id="navAccount" style="display:none;">
+          <span class="acc-credits"><b id="navCredits">0</b>&nbsp;credits</span>
+          <div class="acc-avatar" id="navAvatar" title="Account">A</div>
+        </div>
+        <div class="acc-menu" id="accMenu">
+          <div class="acc-name" id="menuName">—</div>
+          <div class="acc-email" id="menuEmail">—</div>
+          <div class="acc-divider"></div>
+          <div style="padding:4px 12px; font-size:12.5px; color:var(--text-muted);">
+            Plan: <span id="menuPlan" style="color:#fff;font-weight:600;">Free</span>
+          </div>
+          <div style="padding:2px 12px 8px; font-size:12.5px; color:var(--text-muted);">
+            Credits: <span id="menuCredits" style="color:#fff;font-weight:600;">0</span>
+          </div>
+          <div class="acc-divider"></div>
+          <a href="#pricing-tryit" id="menuPlans">View plans</a>
+          <a href="admin.html" id="menuAdmin" style="display:none;">Admin dashboard</a>
+          <button id="menuLogout">Sign out</button>
+        </div>
+      </div>
     </div>
   </nav>
 
@@ -461,6 +659,23 @@
         Upload a panoramic photo of your room, describe your vision, and generate a redesigned
         360° spatial preview.
       </p>
+    </section>
+
+    <!-- CREDITS / PLAN BAR (visible when signed in) -->
+    <section class="glass-card is-glow credits-bar" id="creditsBar" style="display:none;" data-aos="fade-up">
+      <div class="cb-stat">
+        <span class="cb-label">Credits Remaining</span>
+        <span class="cb-value gradient-text" id="creditsValue">0</span>
+      </div>
+      <div class="cb-divider"></div>
+      <div class="cb-stat">
+        <span class="cb-label">Current Plan</span>
+        <span class="cb-value" id="planValue" style="font-size:20px;">Free Plan</span>
+      </div>
+      <div class="cb-actions">
+        <a href="#pricing-tryit" class="btn-secondary">View plans</a>
+        <a href="#pricing-tryit" class="btn-primary" id="cbUpgrade">Buy Credits</a>
+      </div>
     </section>
 
     <!-- MAIN INTERFACE -->
@@ -570,7 +785,80 @@
         </p>
       </div>
     </section>
+
+    <!-- PRICING (inside Try It) -->
+    <section id="pricing-tryit" style="margin-top: 96px;" data-aos="fade-up">
+      <div class="text-center" style="max-width: 60ch; margin: 0 auto 40px;">
+        <p class="eyebrow">Pricing</p>
+        <h2 class="text-4xl md:text-5xl font-bold mt-3 mb-4">Continue transforming your spaces</h2>
+        <p class="helper-text" style="font-size:16px;">
+          Every new account includes <strong style="color:#fff;">1 free generation</strong>.
+          Choose a plan to keep designing with Arch3.
+        </p>
+      </div>
+      <div class="pricing-grid" id="pricingGrid">
+        <!-- plan cards injected by JS -->
+      </div>
+    </section>
   </main>
+
+  <!-- AUTH MODAL (register / login) -->
+  <div class="modal-overlay" id="authModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+      <button class="modal-close" id="authClose" aria-label="Close">✕</button>
+      <p class="eyebrow">Welcome to Arch3</p>
+      <h2 class="text-2xl font-bold mt-2" id="authTitle">Create your account</h2>
+      <p class="helper-text" style="margin-top:6px;" id="authSubtitle">
+        Sign up to claim your free generation and start redesigning your space.
+      </p>
+
+      <div class="auth-tabs">
+        <button id="tabRegister" class="is-active" type="button">Sign up</button>
+        <button id="tabLogin" type="button">Log in</button>
+      </div>
+
+      <form id="authForm" novalidate>
+        <div class="auth-field" id="nameField">
+          <input class="auth-input" id="authName" type="text" name="name" placeholder="Full name" autocomplete="name">
+        </div>
+        <div class="auth-field">
+          <input class="auth-input" id="authEmail" type="email" name="email" placeholder="Email address" autocomplete="email">
+        </div>
+        <div class="auth-field">
+          <input class="auth-input" id="authPassword" type="password" name="password" placeholder="Password" autocomplete="current-password">
+        </div>
+        <p class="auth-error" id="authError"></p>
+        <button class="btn-primary w-full justify-center" id="authSubmit" type="submit" style="width:100%; justify-content:center; margin-top:6px;">
+          Create account <span>→</span>
+        </button>
+      </form>
+
+      <p class="auth-switch" id="authSwitch">
+        Already have an account? <button type="button" id="switchToLogin">Log in</button>
+      </p>
+    </div>
+  </div>
+
+  <!-- LOCKOUT MODAL (no credits) -->
+  <div class="modal-overlay" id="lockoutModal" aria-hidden="true">
+    <div class="modal-card is-wide" role="dialog" aria-modal="true" aria-labelledby="lockoutTitle">
+      <button class="modal-close" id="lockoutClose" aria-label="Close">✕</button>
+      <div class="text-center">
+        <p class="eyebrow">Unlock more redesigns</p>
+        <h2 class="text-3xl md:text-4xl font-bold mt-3" id="lockoutTitle">Continue Designing Your Space</h2>
+        <p class="lockout-msg">
+          Your free generation has been used. Unlock more redesigns and continue exploring
+          new possibilities with Arch3.
+        </p>
+      </div>
+      <div class="pricing-grid" id="lockoutGrid" style="margin-top:32px;">
+        <!-- plan cards injected by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <!-- FOOTER (same as site) -->
   <footer>
@@ -644,6 +932,272 @@
         if (!to || !to.closest || !to.closest(HOVER_SEL)) document.body.classList.remove('cursor-hover');
       });
       window.addEventListener('beforeunload', () => { if (rafId) cancelAnimationFrame(rafId); });
+    })();
+  </script>
+
+  <!-- Account logic: session, auth, credits, plans, lockout -->
+  <script type="module">
+    const API = window.ARCH3_API_BASE || '';
+
+    const FALLBACK_PLANS = [
+      { id:'starter',      name:'Starter',      type:'pack',         credits:5,   price_label:'US$4.99',  cta:'Buy Credits',     features:['5 generations'] },
+      { id:'plus',         name:'Plus',         type:'pack',         credits:10,  price_label:'US$8.99',  cta:'Buy Credits',     features:['10 generations'] },
+      { id:'professional', name:'Professional', type:'pack',         credits:25,  price_label:'US$19.99', cta:'Buy Credits',     features:['25 generations'] },
+      { id:'pro',          name:'Pro',          type:'subscription', credits:100, price_label:'US$59.99', interval:'month', cta:'Upgrade to Pro',
+        features:['100 generations / month','Priority processing','Faster rendering queue','Early access features','Higher image quality presets'] },
+    ];
+
+    let currentUser = null;
+    let plans = FALLBACK_PLANS;
+    let authMode = 'register';
+    let pendingGenerate = false;
+
+    const $ = (id) => document.getElementById(id);
+
+    async function api(path, opts = {}) {
+      const res = await fetch(API + path, { credentials: 'same-origin', ...opts });
+      const raw = await res.text();
+      let data = {};
+      if (raw) { try { data = JSON.parse(raw); } catch { /* non-JSON */ } }
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    // ---------- Toast ----------
+    let toastTimer = null;
+    function toast(msg, isError = false) {
+      const t = $('toast');
+      t.textContent = msg;
+      t.classList.toggle('is-error', isError);
+      t.classList.add('is-show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove('is-show'), 4500);
+    }
+
+    // ---------- Rendering ----------
+    function renderAccount() {
+      const loggedIn = !!currentUser;
+      $('navSignIn').style.display = loggedIn ? 'none' : 'inline-flex';
+      $('navAccount').style.display = loggedIn ? 'inline-flex' : 'none';
+      $('creditsBar').style.display = loggedIn ? 'flex' : 'none';
+
+      if (loggedIn) {
+        const initial = (currentUser.name || 'A').trim().charAt(0).toUpperCase() || 'A';
+        $('navCredits').textContent = currentUser.credits_remaining;
+        $('navAvatar').textContent = initial;
+        $('menuName').textContent = currentUser.name;
+        $('menuEmail').textContent = currentUser.email;
+        $('menuPlan').textContent = currentUser.plan_name || 'Free Plan';
+        $('menuCredits').textContent = currentUser.credits_remaining;
+        $('menuAdmin').style.display = currentUser.is_admin ? 'block' : 'none';
+        $('creditsValue').textContent = currentUser.credits_remaining;
+        $('planValue').textContent = currentUser.plan_name || 'Free Plan';
+      }
+      renderPlans();
+    }
+
+    function planCardHTML(p) {
+      const isPro = p.type === 'subscription';
+      const isCurrent = currentUser && currentUser.plan === p.id;
+      const price = isPro ? `${p.price_label}<small>/month</small>` : p.price_label;
+      const features = (p.features || []).map((f) => `<li>${f}</li>`).join('');
+      let cta = p.cta || 'Buy Credits';
+      let btnClass = isPro ? 'btn-primary' : 'btn-secondary';
+      if (isCurrent && isPro && currentUser.subscription_status === 'active') {
+        cta = 'Current plan';
+      }
+      return `
+        <div class="plan-card ${isPro ? 'is-pro' : ''} ${isCurrent ? 'is-current' : ''}">
+          ${isPro ? '<span class="plan-badge">Most Popular</span>' : ''}
+          <div class="plan-name">${p.name}</div>
+          <div class="plan-price">${price}</div>
+          <ul class="plan-features">${features}</ul>
+          <button class="${btnClass} buy-btn" data-plan="${p.id}">${cta}</button>
+        </div>`;
+    }
+
+    function renderPlans() {
+      const paid = plans.filter((p) => p.type !== 'free');
+      const html = paid.map(planCardHTML).join('');
+      $('pricingGrid').innerHTML = html;
+      $('lockoutGrid').innerHTML = html;
+    }
+
+    // ---------- Auth modal ----------
+    function setAuthMode(mode) {
+      authMode = mode;
+      const reg = mode === 'register';
+      $('tabRegister').classList.toggle('is-active', reg);
+      $('tabLogin').classList.toggle('is-active', !reg);
+      $('nameField').style.display = reg ? 'block' : 'none';
+      $('authTitle').textContent = reg ? 'Create your account' : 'Welcome back';
+      $('authSubtitle').textContent = reg
+        ? 'Sign up to claim your free generation and start redesigning your space.'
+        : 'Log in to continue designing with Arch3.';
+      $('authSubmit').innerHTML = reg ? 'Create account <span>→</span>' : 'Log in <span>→</span>';
+      $('authPassword').setAttribute('autocomplete', reg ? 'new-password' : 'current-password');
+      $('authSwitch').innerHTML = reg
+        ? 'Already have an account? <button type="button" id="switchToLogin">Log in</button>'
+        : 'Don\'t have an account? <button type="button" id="switchToRegister">Sign up</button>';
+      $('authError').textContent = '';
+    }
+    function openAuth(mode = 'register') {
+      setAuthMode(mode);
+      $('authModal').classList.add('is-open');
+      $('authModal').setAttribute('aria-hidden', 'false');
+    }
+    function closeAuth() {
+      $('authModal').classList.remove('is-open');
+      $('authModal').setAttribute('aria-hidden', 'true');
+      pendingGenerate = false;
+    }
+
+    // ---------- Lockout modal ----------
+    function openLockout() {
+      $('lockoutModal').classList.add('is-open');
+      $('lockoutModal').setAttribute('aria-hidden', 'false');
+    }
+    function closeLockout() {
+      $('lockoutModal').classList.remove('is-open');
+      $('lockoutModal').setAttribute('aria-hidden', 'true');
+    }
+
+    // ---------- Buy / checkout ----------
+    async function buy(planId, btn) {
+      if (!currentUser) { openAuth('register'); return; }
+      const original = btn ? btn.textContent : '';
+      if (btn) { btn.disabled = true; btn.textContent = 'Processing…'; }
+      const { ok, data } = await api('/api/buy-credits.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planId }),
+      });
+      if (btn) { btn.disabled = false; btn.textContent = original; }
+
+      if (!ok) { toast(data.error || 'Could not start checkout. Please try again.', true); return; }
+      if (data.mode === 'stripe' && data.checkout_url) { window.location.href = data.checkout_url; return; }
+
+      // Dev mode: credited immediately.
+      currentUser = data.user;
+      renderAccount();
+      closeLockout();
+      toast(data.message || `Credits added. You now have ${currentUser.credits_remaining} generations.`);
+    }
+
+    // ---------- Init ----------
+    async function loadPlans() {
+      const { ok, data } = await api('/api/plans.php');
+      if (ok && Array.isArray(data.plans) && data.plans.length) plans = data.plans;
+    }
+    async function loadMe() {
+      const { ok, data } = await api('/api/me.php');
+      currentUser = ok && data.user ? data.user : null;
+      renderAccount();
+      if (!currentUser) openAuth('register'); // gate: account required before generating
+    }
+    function handlePurchaseQuery() {
+      const params = new URLSearchParams(window.location.search);
+      const p = params.get('purchase');
+      if (p === 'success') toast('Payment received — your credits are ready.');
+      if (p === 'cancel') toast('Checkout cancelled. No charge was made.', true);
+      if (p) {
+        params.delete('purchase');
+        const qs = params.toString();
+        history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+      }
+    }
+
+    // ---------- Wiring ----------
+    $('navSignIn').addEventListener('click', () => openAuth('register'));
+    $('authClose').addEventListener('click', closeAuth);
+    $('lockoutClose').addEventListener('click', closeLockout);
+    $('tabRegister').addEventListener('click', () => setAuthMode('register'));
+    $('tabLogin').addEventListener('click', () => setAuthMode('login'));
+    $('authSwitch').addEventListener('click', (e) => {
+      if (e.target.id === 'switchToLogin') setAuthMode('login');
+      if (e.target.id === 'switchToRegister') setAuthMode('register');
+    });
+
+    // Close modals on backdrop click.
+    $('authModal').addEventListener('click', (e) => { if (e.target === $('authModal')) closeAuth(); });
+    $('lockoutModal').addEventListener('click', (e) => { if (e.target === $('lockoutModal')) closeLockout(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { closeAuth(); closeLockout(); $('accMenu').classList.remove('is-open'); }
+    });
+
+    // Account menu.
+    $('navAvatar').addEventListener('click', (e) => { e.stopPropagation(); $('accMenu').classList.toggle('is-open'); });
+    document.addEventListener('click', (e) => {
+      if (!$('accMenu').contains(e.target) && e.target !== $('navAvatar')) $('accMenu').classList.remove('is-open');
+    });
+    $('menuLogout').addEventListener('click', async () => {
+      await api('/api/auth-logout.php', { method: 'POST' });
+      currentUser = null;
+      renderAccount();
+      $('accMenu').classList.remove('is-open');
+      toast('Signed out.');
+      openAuth('register');
+    });
+
+    // Buy buttons (delegated — works for both grids).
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.buy-btn');
+      if (btn) { e.preventDefault(); buy(btn.dataset.plan, btn); }
+    });
+
+    // Auth submit.
+    $('authForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      $('authError').textContent = '';
+      const name = $('authName').value.trim();
+      const email = $('authEmail').value.trim();
+      const password = $('authPassword').value;
+
+      if (authMode === 'register' && name.length < 2) { $('authError').textContent = 'Please enter your name.'; return; }
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { $('authError').textContent = 'Please enter a valid email address.'; return; }
+      if (password.length < 6) { $('authError').textContent = 'Password must be at least 6 characters.'; return; }
+
+      $('authSubmit').disabled = true;
+      const path = authMode === 'register' ? '/api/auth-register.php' : '/api/auth-login.php';
+      const body = authMode === 'register' ? { name, email, password } : { email, password };
+      const { ok, data } = await api(path, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      });
+      $('authSubmit').disabled = false;
+
+      if (!ok) { $('authError').textContent = data.error || 'Something went wrong. Please try again.'; return; }
+
+      currentUser = data.user;
+      renderAccount();
+      const resume = pendingGenerate;
+      closeAuth();
+      $('authForm').reset();
+      const first = (currentUser.name || '').split(' ')[0];
+      toast(authMode === 'register'
+        ? `Welcome${first ? ', ' + first : ''}! You have ${currentUser.credits_remaining} free generation.`
+        : 'Signed in.');
+      if (resume) { const g = $('generateButton'); if (g && !g.disabled) g.click(); }
+    });
+
+    // Expose a tiny API for the generator module.
+    window.Arch3 = {
+      isLoggedIn: () => !!currentUser,
+      requireLogin() {
+        if (currentUser) return true;
+        pendingGenerate = true;
+        openAuth('register');
+        return false;
+      },
+      setCredits(n) {
+        if (currentUser) { currentUser.credits_remaining = Number(n); renderAccount(); }
+      },
+      openLockout,
+      getUser: () => currentUser,
+    };
+
+    (async () => {
+      await loadPlans();
+      await loadMe();
+      handlePurchaseQuery();
     })();
   </script>
 
@@ -892,6 +1446,9 @@
       if (!selectedFile) { setError('Choose a panorama image first.'); return; }
       if (!promptInput.value.trim()) { setError('Describe the transformation first.'); return; }
 
+      // Account required: no generation without a signed-in user.
+      if (window.Arch3 && !window.Arch3.requireLogin()) return;
+
       setError('');
       generateButton.disabled = true;
       startLoading();
@@ -920,11 +1477,21 @@
         } else {
           throw new Error(`The generator is waking up (HTTP ${response.status}). Please wait ~1 minute and click Generate again.`);
         }
-        if (!response.ok) throw new Error(payload.error || `Generation failed (HTTP ${response.status}).`);
+        if (!response.ok) {
+          if (payload.code === 'auth_required' && window.Arch3) window.Arch3.requireLogin();
+          if (payload.code === 'no_credits' && window.Arch3) {
+            window.Arch3.setCredits(0);
+            window.Arch3.openLockout();
+          }
+          throw new Error(payload.error || `Generation failed (HTTP ${response.status}).`);
+        }
 
         loadingStep.textContent = loadingSteps[loadingSteps.length - 1];
         loadingBar.style.width = '100%';
         mountViewer(payload.imageUrl);
+        if (window.Arch3 && typeof payload.credits_remaining === 'number') {
+          window.Arch3.setCredits(payload.credits_remaining);
+        }
       } catch (error) {
         setError(error instanceof Error ? error.message : 'Generation failed.');
         // Fall back to showing the upload again if there was one

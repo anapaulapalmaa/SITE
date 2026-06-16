@@ -8,26 +8,48 @@
  * A chave fica em arch3-config.php FORA do diretório público.
  */
 
+require_once __DIR__ . '/lib/auth.php';
+
 header('Content-Type: application/json; charset=utf-8');
 set_time_limit(180);
 @ini_set('max_execution_time', '180');
 
-function fail($status, $message) {
+function fail($status, $message, $extra = []) {
     http_response_code($status);
-    echo json_encode(['error' => $message]);
+    echo json_encode(array_merge(['error' => $message], $extra));
     exit;
 }
 
+// ---- Autenticação obrigatória ----
+// Nenhuma geração sem conta: toda geração é associada a um usuário logado.
+$pdo = arch3_db();
+$user = current_user();
+if (!$user) {
+    fail(401, 'Please sign in to generate.', ['code' => 'auth_required']);
+}
+
+// ---- Verificação de créditos ----
+if ((int) $user['credits_remaining'] <= 0) {
+    fail(402, "You've used your free generation.\n\nChoose a plan to continue transforming spaces with Arch3.", [
+        'code' => 'no_credits',
+        'credits_remaining' => 0,
+        'plan' => $user['subscription_plan'] ?: 'free',
+    ]);
+}
+
 // ---- Config / chave (fora do webroot) ----
-$cfgPath = __DIR__ . '/../../arch3-config.php';
-$cfg = is_file($cfgPath) ? include $cfgPath : [];
-$apiKey = $cfg['OPENAI_API_KEY'] ?? '';
+$apiKey = (string) cfg('OPENAI_API_KEY', '');
 if ($apiKey === '') {
     fail(500, 'OPENAI_API_KEY não configurada no servidor.');
 }
-$model   = $cfg['OPENAI_IMAGE_MODEL']   ?? 'gpt-image-1.5';
-$size    = $cfg['OPENAI_IMAGE_SIZE']    ?? '1536x1024';
-$quality = $cfg['OPENAI_IMAGE_QUALITY'] ?? 'medium';
+$model   = cfg('OPENAI_IMAGE_MODEL', 'gpt-image-1.5');
+$size    = cfg('OPENAI_IMAGE_SIZE', '1536x1024');
+$quality = cfg('OPENAI_IMAGE_QUALITY', 'medium');
+
+// Pro: preset de qualidade superior (Higher image quality presets).
+if (($user['subscription_plan'] ?? '') === 'pro' && ($user['subscription_status'] ?? '') === 'active') {
+    $quality = cfg('OPENAI_IMAGE_QUALITY_PRO', 'high');
+}
 
 // ---- Validação de entrada ----
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -131,6 +153,22 @@ $imageBinary = base64_decode($b64);
 // ---- Expansão para panorama ~2:1 (ambient fill via Imagick) ----
 list($panoBinary, $w, $h, $expanded) = toPanorama($imageBinary);
 
+// ---- Consome 1 crédito (somente após geração bem-sucedida) ----
+// Guard atômico: o UPDATE só decrementa se ainda houver crédito, evitando
+// saldo negativo em requisições concorrentes.
+$consume = $pdo->prepare(
+    'UPDATE users
+        SET credits_remaining = credits_remaining - 1,
+            generations_used = generations_used + 1
+      WHERE id = :id AND credits_remaining > 0'
+);
+$consume->execute([':id' => $user['id']]);
+
+$pdo->prepare('INSERT INTO generations (user_id, created_at, prompt) VALUES (:uid, :t, :p)')
+    ->execute([':uid' => $user['id'], ':t' => date('Y-m-d H:i:s'), ':p' => mb_substr($prompt, 0, 1000)]);
+
+$creditsLeft = max(0, (int) $user['credits_remaining'] - 1);
+
 echo json_encode([
     'imageUrl' => 'data:image/png;base64,' . base64_encode($panoBinary),
     'mimeType' => 'image/png',
@@ -140,6 +178,7 @@ echo json_encode([
     'expanded' => $expanded,
     'expansionStrategy' => 'ambient-php',
     'provider' => 'openai',
+    'credits_remaining' => $creditsLeft,
 ]);
 
 /**

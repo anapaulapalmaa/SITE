@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arch3 — Admin Dashboard</title>
+  <meta name="robots" content="noindex, nofollow">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    * { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    h1, h2, h3, h4 { font-family: 'Playfair Display', serif; }
+
+    :root {
+      --bg-deep: #050712;
+      --text-primary: #F8FAFC;
+      --text-muted: #94A3B8;
+      --text-soft: #CBD5E1;
+      --accent-purple: #A78BFA;
+      --accent-purple-strong: #A855F7;
+      --line-soft: rgba(148, 163, 184, 0.16);
+      --line-strong: rgba(139, 92, 246, 0.35);
+      --glass-card: rgba(15, 18, 42, 0.72);
+      --glass-strong: rgba(15, 18, 42, 0.86);
+    }
+
+    html, body { background: var(--bg-deep); }
+    body {
+      background:
+        radial-gradient(circle at 15% 10%, rgba(139, 92, 246, 0.22), transparent 35%),
+        radial-gradient(circle at 85% 20%, rgba(59, 130, 246, 0.18), transparent 32%),
+        radial-gradient(circle at 50% 70%, rgba(168, 85, 247, 0.10), transparent 42%),
+        var(--bg-deep);
+      color: var(--text-primary);
+      background-attachment: fixed;
+      margin: 0; min-height: 100vh;
+    }
+
+    .gradient-text {
+      background: linear-gradient(90deg, #8B5CF6, #3B82F6);
+      background-clip: text; -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+    }
+
+    .navbar {
+      position: sticky; top: 16px; z-index: 50;
+      max-width: 1240px; width: calc(100% - 32px);
+      margin: 16px auto 0;
+      backdrop-filter: blur(20px);
+      background: rgba(10, 12, 30, 0.72);
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      border-radius: 9999px; padding: 12px 24px;
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.35), 0 0 40px rgba(139, 92, 246, 0.15);
+      box-sizing: border-box;
+    }
+    .navbar-logo-horizontal { height: 34px; width: auto; object-fit: contain; display: block; }
+
+    .btn-primary {
+      background: linear-gradient(90deg, #8B5CF6, #3B82F6);
+      color: #fff; padding: 11px 24px; border-radius: 9999px;
+      font-weight: 600; border: none; cursor: pointer;
+      transition: all 0.3s ease; box-shadow: 0 0 28px rgba(139, 92, 246, 0.45);
+      text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 40px rgba(139, 92, 246, 0.6); }
+    .btn-secondary {
+      background: rgba(15, 18, 42, 0.6); color: #fff;
+      padding: 10px 20px; border-radius: 9999px; font-weight: 600;
+      border: 1px solid rgba(139, 92, 246, 0.35); cursor: pointer;
+      transition: all 0.3s ease; backdrop-filter: blur(14px);
+      text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-secondary:hover { background: rgba(20, 24, 56, 0.7); border-color: rgba(139, 92, 246, 0.6); }
+
+    .page-shell { max-width: 1240px; margin: 0 auto; padding: 56px 24px 96px; }
+    .eyebrow { text-transform: uppercase; letter-spacing: 0.18em; font-size: 11px; font-weight: 700; color: var(--accent-purple); }
+
+    .glass-card {
+      background: var(--glass-card); border: 1px solid var(--line-soft);
+      border-radius: 24px; backdrop-filter: blur(20px);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28); padding: 24px;
+    }
+
+    .stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 18px; }
+    .stat-card { display: flex; flex-direction: column; gap: 8px; }
+    .stat-label { text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px; font-weight: 700; color: var(--accent-purple); }
+    .stat-value { font-size: 38px; font-weight: 800; color: #fff; line-height: 1; }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    th, td { text-align: left; padding: 12px 14px; white-space: nowrap; }
+    th { color: var(--accent-purple); text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; font-weight: 700; border-bottom: 1px solid var(--line-strong); }
+    td { color: var(--text-soft); border-bottom: 1px solid var(--line-soft); }
+    tbody tr:hover { background: rgba(139, 92, 246, 0.06); }
+    .plan-tag {
+      display: inline-block; padding: 3px 10px; border-radius: 9999px;
+      font-size: 11px; font-weight: 700;
+      background: rgba(139, 92, 246, 0.16); border: 1px solid rgba(139, 92, 246, 0.35); color: #E2E8F0;
+    }
+
+    .gate {
+      max-width: 440px; margin: 80px auto; text-align: center;
+    }
+    .auth-input {
+      width: 100%; box-sizing: border-box; padding: 13px 15px; border-radius: 14px;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(148,163,184,0.18);
+      color: #fff; font: inherit; outline: none; margin-bottom: 12px;
+    }
+    .auth-input:focus { border-color: #8B5CF6; box-shadow: 0 0 0 3px rgba(139,92,246,0.18); }
+    .msg { color: #fca5a5; font-size: 13.5px; min-height: 18px; margin: 4px 0 8px; }
+
+    @media (max-width: 768px) {
+      .stat-grid { grid-template-columns: 1fr; }
+      .page-shell { padding: 36px 16px 72px; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="flex items-center justify-between w-full">
+      <a href="index.html"><img src="./assets/logo-horizontal.png" alt="Arch3 logo" class="navbar-logo-horizontal"></a>
+      <div class="flex items-center gap-3">
+        <span class="eyebrow" id="navAdminLabel" style="display:none;">Admin</span>
+        <a href="try-it.html" class="btn-secondary text-sm">Try It</a>
+        <button class="btn-secondary text-sm" id="logoutBtn" style="display:none;">Sign out</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="page-shell">
+    <!-- Loading -->
+    <div id="loadingState" style="text-align:center; padding:80px 0; color:var(--text-muted);">Loading…</div>
+
+    <!-- Login gate (shown when not authenticated as admin) -->
+    <section id="gate" class="gate glass-card" style="display:none;">
+      <p class="eyebrow">Restricted</p>
+      <h1 class="text-3xl font-bold mt-3 mb-2">Admin access</h1>
+      <p style="color:var(--text-muted); font-size:14px; margin-bottom:22px;">Sign in with an administrator account to view the dashboard.</p>
+      <form id="gateForm">
+        <input class="auth-input" id="gateEmail" type="email" placeholder="Admin email" autocomplete="email">
+        <input class="auth-input" id="gatePassword" type="password" placeholder="Password" autocomplete="current-password">
+        <p class="msg" id="gateMsg"></p>
+        <button class="btn-primary w-full justify-center" id="gateSubmit" type="submit" style="width:100%; justify-content:center;">Sign in <span>→</span></button>
+      </form>
+    </section>
+
+    <!-- Dashboard -->
+    <section id="dashboard" style="display:none;">
+      <div class="flex items-end justify-between flex-wrap gap-4" style="margin-bottom:28px;">
+        <div>
+          <p class="eyebrow">Dashboard</p>
+          <h1 class="text-4xl font-bold mt-2">Arch3 <span class="gradient-text">Admin</span></h1>
+        </div>
+        <a href="#" class="btn-primary" id="exportBtn">⬇ Export CSV</a>
+      </div>
+
+      <!-- Stats -->
+      <div class="stat-grid" style="margin-bottom:18px;">
+        <div class="glass-card stat-card"><span class="stat-label">Total Users</span><span class="stat-value" id="statUsers">—</span></div>
+        <div class="glass-card stat-card"><span class="stat-label">Total Generations</span><span class="stat-value" id="statGenerations">—</span></div>
+        <div class="glass-card stat-card"><span class="stat-label">Monthly Revenue</span><span class="stat-value gradient-text" id="statRevenue">—</span></div>
+      </div>
+      <div class="stat-grid" style="margin-bottom:36px;">
+        <div class="glass-card stat-card"><span class="stat-label">Free Users</span><span class="stat-value" id="statFree">—</span></div>
+        <div class="glass-card stat-card"><span class="stat-label">Paid Users</span><span class="stat-value" id="statPaid">—</span></div>
+        <div class="glass-card stat-card"><span class="stat-label">Pro Subscribers</span><span class="stat-value" id="statPro">—</span></div>
+      </div>
+
+      <!-- Leads -->
+      <div class="glass-card">
+        <div class="flex items-center justify-between" style="margin-bottom:16px;">
+          <h2 class="text-2xl font-bold">Leads</h2>
+          <span style="color:var(--text-muted); font-size:13px;" id="leadCount"></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th><th>Email</th><th>Signup Date</th><th>Country</th>
+                <th>Generations Used</th><th>Current Plan</th><th>Credits Remaining</th>
+              </tr>
+            </thead>
+            <tbody id="leadsBody">
+              <tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:28px;">No leads yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const API = '';
+    const $ = (id) => document.getElementById(id);
+
+    async function api(path, opts = {}) {
+      const res = await fetch(API + path, { credentials: 'same-origin', ...opts });
+      const raw = await res.text();
+      let data = {};
+      if (raw) { try { data = JSON.parse(raw); } catch { /* csv or non-json */ } }
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    function fmtDate(s) {
+      if (!s) return '—';
+      const d = new Date(s.replace(' ', 'T'));
+      return isNaN(d) ? s : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    function showGate(msg) {
+      $('loadingState').style.display = 'none';
+      $('dashboard').style.display = 'none';
+      $('gate').style.display = 'block';
+      $('logoutBtn').style.display = 'none';
+      $('navAdminLabel').style.display = 'none';
+      if (msg) $('gateMsg').textContent = msg;
+    }
+    function showDashboard() {
+      $('loadingState').style.display = 'none';
+      $('gate').style.display = 'none';
+      $('dashboard').style.display = 'block';
+      $('logoutBtn').style.display = 'inline-flex';
+      $('navAdminLabel').style.display = 'inline-block';
+    }
+
+    async function loadStats() {
+      const { ok, data, status } = await api('/api/admin-stats.php');
+      if (!ok) { showGate(status === 401 || status === 403 ? 'Sign in with an administrator account.' : (data.error || 'Could not load stats.')); return false; }
+      $('statUsers').textContent = data.total_users;
+      $('statGenerations').textContent = data.total_generations;
+      $('statRevenue').textContent = data.monthly_revenue;
+      $('statFree').textContent = data.free_users;
+      $('statPaid').textContent = data.paid_users;
+      $('statPro').textContent = data.pro_subscribers;
+      return true;
+    }
+
+    async function loadLeads() {
+      const { ok, data } = await api('/api/admin-leads.php');
+      if (!ok) return;
+      const leads = data.leads || [];
+      $('leadCount').textContent = leads.length + (leads.length === 1 ? ' lead' : ' leads');
+      if (!leads.length) return;
+      $('leadsBody').innerHTML = leads.map((l) => `
+        <tr>
+          <td style="color:#fff;">${esc(l.name)}</td>
+          <td>${esc(l.email)}</td>
+          <td>${fmtDate(l.signup_date)}</td>
+          <td>${esc(l.country)}</td>
+          <td>${l.generations_used}</td>
+          <td><span class="plan-tag">${esc(l.plan)}</span></td>
+          <td>${l.credits_remaining}</td>
+        </tr>`).join('');
+    }
+
+    async function boot() {
+      const okStats = await loadStats();
+      if (!okStats) return;
+      showDashboard();
+      await loadLeads();
+    }
+
+    $('exportBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      window.location.href = API + '/api/admin-export.php';
+    });
+
+    $('logoutBtn').addEventListener('click', async () => {
+      await api('/api/auth-logout.php', { method: 'POST' });
+      showGate('Signed out.');
+    });
+
+    $('gateForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      $('gateMsg').textContent = '';
+      const email = $('gateEmail').value.trim();
+      const password = $('gatePassword').value;
+      if (!email || !password) { $('gateMsg').textContent = 'Enter your email and password.'; return; }
+      $('gateSubmit').disabled = true;
+      const { ok, data } = await api('/api/auth-login.php', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }),
+      });
+      $('gateSubmit').disabled = false;
+      if (!ok) { $('gateMsg').textContent = data.error || 'Invalid credentials.'; return; }
+      if (!data.user || !data.user.is_admin) { $('gateMsg').textContent = 'This account does not have admin access.'; return; }
+      boot();
+    });
+
+    boot();
+  </script>
+</body>
+</html>
