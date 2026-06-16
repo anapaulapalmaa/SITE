@@ -1,0 +1,7 @@
+# Arch3 — pretty route for the protected admin dashboard.
+# Access control is enforced server-side by /api/admin-*.php (admin session
+# required); this rewrite only maps the friendly /admin URL to the page.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^admin/?$ admin.html [L]
+</IfModule>

@@ -1,55 +1,56 @@
-# Arch3 — Spatial AI (Render / Node)
+# Arch3 — arch3.net
 
 Site da Arch3 + ferramenta **Try It** (redesign de ambientes em 360° com IA),
-contas/login, captura de **leads** e painel **/admin** — tudo num **único**
-serviço Node/Express hospedado no **Render**. Sem PHP, sem cPanel, sem MySQL.
+**login/cadastro**, **créditos/planos**, captura de **leads** e painel
+**admin** — rodando no próprio servidor de **arch3.net** (HostGator / cPanel),
+com backend em **PHP** e banco **MySQL**.
 
-## Arquitetura
+## Estrutura
 
 ```
-server.js              # Express: serve public/ + toda a API /api/*
-lib/
-├── store.js           # armazenamento em JSON (data/db.json) — users/leads/gerações
-├── auth.js            # sessão (cookie), bcrypt, usuário atual, admin
-├── plans.js           # planos e preços (Free/Starter/Plus/Professional/Pro)
-└── images.js          # OpenAI Images (edits) + panorama sem blur/stretch
-public/                # frontend estático
-├── index.html         # landing
-├── try-it.html        # gerador 360 (login obrigatório, créditos, planos)
-├── admin.html         # painel de leads (login admin + Export CSV)
-└── assets/
-data/                  # criado em runtime (gitignored)
+index.html            # landing
+try-it.html           # gerador 360 (login obrigatório, créditos, planos)
+admin.html            # painel admin (métricas, leads, Export CSV)  -> arch3.net/admin
+.htaccess             # rota amigável /admin -> admin.html
+assets/               # logos e imagens
+php-backend/          # backend PHP (publicado em arch3.net/api)
+├── health.php
+├── auth-register.php auth-login.php auth-logout.php me.php
+├── plans.php buy-credits.php
+├── generate-redesign.php      # geração de imagem (OpenAI) + panorama sem blur
+├── admin-stats.php admin-leads.php admin-export.php
+├── stripe-webhook.php         # opcional (Stripe pronto, desligado por padrão)
+├── arch3-config.example.php   # modelo de configuração (vai para a HOME)
+└── lib/ (config, db, auth, billing, plans, helpers)
 ```
 
-## Endpoints (`/api`)
+## Publicação em arch3.net (cPanel)
 
-`health`, `auth-register`, `auth-login`, `auth-logout`, `me`, `plans`,
-`buy-credits`, `generate-redesign`, `admin-stats`, `admin-leads`,
-`admin-export`. (O frontend pode chamar com ou sem sufixo `.php`.)
+No HostGator, o conteúdo público fica em `public_html/`:
 
-## Variáveis de ambiente
+| Local no repositório         | Destino em arch3.net (cPanel)        |
+|------------------------------|--------------------------------------|
+| `index.html`, `try-it.html`, `admin.html`, `.htaccess` | `public_html/` |
+| `assets/`                    | `public_html/assets/`                |
+| `php-backend/*.php`          | `public_html/api/`                   |
+| `php-backend/lib/*.php`      | `public_html/api/lib/`               |
+| `php-backend/arch3-config.example.php` → `arch3-config.php` | `/home/SEU_USUARIO/` (FORA do public_html) |
 
-Ver `.env.example`. Essenciais no Render:
+O pacote pronto para upload é gerado em `dist/arch3-hostgator-upload.zip`
+(veja `dist/arch3-hostgator/README_UPLOAD.txt` para o passo a passo).
 
-- `OPENAI_API_KEY` — chave da OpenAI (secret).
-- `ADMIN_EMAIL` — quem logar com este e-mail vê `/admin` e a lista de leads.
-- `SESSION_SECRET` — segredo do cookie de sessão (o Render gera automaticamente).
+## Configuração (arch3-config.php, na HOME, fora do public_html)
 
-## Rodar localmente
+- `OPENAI_API_KEY` — chave da OpenAI (geração de imagem).
+- `DB_HOST` / `DB_NAME` / `DB_USER` / `DB_PASS` — banco MySQL do cPanel.
+- `ADMIN_EMAIL` — quem logar com este e-mail vê `arch3.net/admin` e a lista de leads.
 
-```bash
-npm install
-cp .env.example .env   # preencha OPENAI_API_KEY e ADMIN_EMAIL
-npm start              # http://localhost:3000
-```
+As tabelas (`users`, `generations`, `purchases`) são criadas automaticamente no
+primeiro acesso — não é preciso importar `.sql`.
 
-## Deploy (Render)
+## URLs
 
-`render.yaml` já está configurado (Blueprint). Com o repositório conectado ao
-Render e `autoDeploy: true`, **cada push na branch principal redeploya
-automaticamente**. Defina `OPENAI_API_KEY` e `ADMIN_EMAIL` no painel do Render.
-
-> **Persistência:** no plano *free* o disco é efêmero — os dados em `data/`
-> se perdem a cada deploy/restart. Para manter leads/contas, crie um **Render
-> Disk** (instância paga), monte em `/var/data` e defina `DATA_DIR=/var/data`.
-> Depois é direto migrar o `store.js` para SQLite/Postgres.
+- `https://arch3.net/` — landing
+- `https://arch3.net/try-it.html` — Try It (cadastro/login → geração 360)
+- `https://arch3.net/admin` — painel admin (login com `ADMIN_EMAIL`) → leads + Export CSV
+- `https://arch3.net/api/health.php` — diagnóstico do backend

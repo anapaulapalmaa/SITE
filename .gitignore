@@ -1,10 +1,10 @@
-node_modules/
 .env
 .env.local
 .DS_Store
+node_modules/
 
-# Dados em runtime (users/leads/gerações em JSON) — não versionar
-data/
+# Config REAL do backend (chaves/senhas) — NUNCA versionar
+php-backend/arch3-config.php
 
 # Arquivos grandes não usados na raiz (mantêm o repo leve)
 IMAGEM AMBIENTE 360.jpg
