@@ -1,10 +1,12 @@
-# Render Blueprint — deploy Arch3 (landing + backend Try It) as one Node service.
+# Render Blueprint — Arch3 como UM único serviço Node (frontend + API + OpenAI).
 # Docs: https://render.com/docs/blueprint-spec
 #
 # Como usar:
-#   1. Suba este repositório para o GitHub.
-#   2. No Render: New + → Blueprint → conecte o repo. Ele lê este arquivo.
-#   3. Defina OPENAI_API_KEY no painel (é secret, não fica no repositório).
+#   1. No Render: New + → Blueprint → conecte este repositório (lê este arquivo).
+#   2. Defina OPENAI_API_KEY no painel (secret, NUNCA no repositório).
+#   3. (Recomendado) defina ADMIN_EMAIL.
+#
+# autoDeploy: true => cada push na branch principal redeploya automaticamente.
 services:
   - type: web
     name: arch3-site
@@ -15,9 +17,17 @@ services:
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
+      - key: NODE_VERSION
+        value: 20
       # Secret — preencha no painel do Render (NUNCA commitar a chave).
       - key: OPENAI_API_KEY
         sync: false
+      # E-mail do administrador: quem logar com ele vê /admin e a lista de leads.
+      - key: ADMIN_EMAIL
+        sync: false
+      # Segredo para assinar o cookie de sessão (gerado automaticamente).
+      - key: SESSION_SECRET
+        generateValue: true
       - key: OPENAI_IMAGE_MODEL
         value: gpt-image-1.5
       - key: OPENAI_IMAGE_SIZE
@@ -26,5 +36,10 @@ services:
       # medium ≈ $0.05/geração · high ≈ $0.20 · low ≈ $0.013.
       - key: OPENAI_IMAGE_QUALITY
         value: medium
-      - key: PANORAMA_EXPANSION
-        value: ambient
+      - key: OPENAI_IMAGE_QUALITY_PRO
+        value: high
+      # Onde gravar os dados (users/leads/gerações). No plano free o disco é
+      # EFÊMERO (some a cada deploy). Para persistir, crie um Render Disk
+      # (instância paga), monte em /var/data e troque DATA_DIR para /var/data.
+      - key: DATA_DIR
+        value: ./data

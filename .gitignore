@@ -1,8 +1,10 @@
 node_modules/
 .env
 .env.local
-backend/uploads/
 .DS_Store
+
+# Dados em runtime (users/leads/gerações em JSON) — não versionar
+data/
 
 # Arquivos grandes não usados na raiz (mantêm o repo leve)
 IMAGEM AMBIENTE 360.jpg
