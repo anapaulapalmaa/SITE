@@ -179,11 +179,12 @@
             <thead>
               <tr>
                 <th>Name</th><th>Email</th><th>Signup Date</th><th>Country</th>
+                <th>User Type</th><th>Environment</th><th>Email Verified</th>
                 <th>Generations Used</th><th>Current Plan</th><th>Credits Remaining</th>
               </tr>
             </thead>
             <tbody id="leadsBody">
-              <tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:28px;">No leads yet.</td></tr>
+              <tr><td colspan="10" style="text-align:center; color:var(--text-muted); padding:28px;">No leads yet.</td></tr>
             </tbody>
           </table>
         </div>
@@ -243,13 +244,21 @@
       if (!ok) return;
       const leads = data.leads || [];
       $('leadCount').textContent = leads.length + (leads.length === 1 ? ' lead' : ' leads');
-      if (!leads.length) return;
+      if (!leads.length) {
+        $('leadsBody').innerHTML = '<tr><td colspan="10" style="text-align:center; color:var(--text-muted); padding:28px;">No leads yet.</td></tr>';
+        return;
+      }
       $('leadsBody').innerHTML = leads.map((l) => `
         <tr>
           <td style="color:#fff;">${esc(l.name)}</td>
           <td>${esc(l.email)}</td>
           <td>${fmtDate(l.signup_date)}</td>
           <td>${esc(l.country)}</td>
+          <td>${esc(l.user_type)}</td>
+          <td>${esc(l.primary_environment)}</td>
+          <td>${l.email_verified === 'Yes'
+            ? '<span style="color:#34d399;font-weight:600;">Yes</span>'
+            : '<span style="color:#fca5a5;font-weight:600;">No</span>'}</td>
           <td>${l.generations_used}</td>
           <td><span class="plan-tag">${esc(l.plan)}</span></td>
           <td>${l.credits_remaining}</td>
@@ -261,6 +270,14 @@
       if (!okStats) return;
       showDashboard();
       await loadLeads();
+      // Atualização automática: métricas e leads a cada 20s.
+      if (!window.__arch3Refresh) {
+        window.__arch3Refresh = setInterval(async () => {
+          if ($('dashboard').style.display === 'none') return;
+          await loadStats();
+          await loadLeads();
+        }, 20000);
+      }
     }
 
     $('exportBtn').addEventListener('click', (e) => {

@@ -2,8 +2,15 @@
 /**
  * Arch3 — POST /api/generate-redesign.php
  * Recebe: multipart/form-data { image (arquivo), prompt (texto) }
- * Faz: monta prompt arquitetônico + panorâmico, chama a OpenAI Images API,
- *      expande o resultado para um panorama ~2:1 (Imagick) e devolve JSON.
+ *
+ * Fluxo:
+ *   1. Aceita QUALQUER foto de ambiente (não rejeita por resolução, proporção,
+ *      pixels ou por não ser panorâmica).
+ *   2. Pré-processa a imagem (auto-orienta via EXIF, converte para JPG, reduz
+ *      para um tamanho seguro mantendo a proporção) — isso evita timeout/502.
+ *   3. Monta o prompt arquitetônico + de expansão panorâmica.
+ *   4. Chama a OpenAI Images Edit e devolve o resultado como JPEG (leve).
+ *   5. Em qualquer falha, devolve SEMPRE JSON com o motivo real e registra log.
  *
  * A chave fica em arch3-config.php FORA do diretório público.
  */
@@ -11,21 +18,67 @@
 require_once __DIR__ . '/lib/auth.php';
 
 header('Content-Type: application/json; charset=utf-8');
-set_time_limit(180);
-@ini_set('max_execution_time', '180');
+set_time_limit(150);
+@ini_set('max_execution_time', '150');
+
+// --- Nunca deixar resposta vazia / não-JSON vinda do PHP -------------------
+// Se um erro fatal (ou estouro de memória/tempo no nosso lado) interromper o
+// script antes de qualquer saída, este shutdown emite um JSON claro.
+$GLOBALS['arch3_responded'] = false;
+register_shutdown_function(function () {
+    if ($GLOBALS['arch3_responded']) {
+        return;
+    }
+    $err = error_get_last();
+    $msg = 'The generator hit an unexpected error. Please try again in a moment.';
+    $code = 'server_error';
+    if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        error_log('[arch3] fatal in generate-redesign: ' . $err['message'] . ' @ ' . $err['file'] . ':' . $err['line']);
+        if (stripos($err['message'], 'memory') !== false) {
+            $msg = 'The image was too heavy to process. Try a slightly smaller photo.';
+            $code = 'image_too_large';
+        }
+    }
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+    }
+    echo json_encode(['error' => $msg, 'code' => $code]);
+});
 
 function fail($status, $message, $extra = []) {
-    http_response_code($status);
+    $GLOBALS['arch3_responded'] = true;
+    if (!headers_sent()) {
+        http_response_code($status);
+    }
+    if (!empty($extra['log'])) {
+        error_log('[arch3] generate fail (' . $status . '): ' . $extra['log']);
+        unset($extra['log']);
+    }
     echo json_encode(array_merge(['error' => $message], $extra));
     exit;
 }
 
+function ok_json(array $payload) {
+    $GLOBALS['arch3_responded'] = true;
+    echo json_encode($payload);
+    exit;
+}
+
 // ---- Autenticação obrigatória ----
-// Nenhuma geração sem conta: toda geração é associada a um usuário logado.
 $pdo = arch3_db();
 $user = current_user();
 if (!$user) {
     fail(401, 'Please sign in to generate.', ['code' => 'auth_required']);
+}
+
+// ---- E-mail precisa estar verificado (crédito grátis só após verificação) ----
+// Controlado por flag: só passa a bloquear quando a verificação de e-mail
+// estiver totalmente publicada (front + back).
+if (cfg('REQUIRE_EMAIL_VERIFICATION', false)
+    && (int) ($user['email_verified'] ?? 0) !== 1
+    && !is_admin_email($user['email'])) {
+    fail(403, 'Please verify your email before generating.', ['code' => 'email_unverified']);
 }
 
 // ---- Verificação de créditos ----
@@ -40,129 +93,160 @@ if ((int) $user['credits_remaining'] <= 0) {
 // ---- Config / chave (fora do webroot) ----
 $apiKey = (string) cfg('OPENAI_API_KEY', '');
 if ($apiKey === '') {
-    fail(500, 'OPENAI_API_KEY não configurada no servidor.');
+    fail(500, 'Image generation is not configured on the server yet.', ['code' => 'no_api_key', 'log' => 'OPENAI_API_KEY missing']);
 }
 $model   = cfg('OPENAI_IMAGE_MODEL', 'gpt-image-1.5');
-$size    = cfg('OPENAI_IMAGE_SIZE', '1536x1024');
 $quality = cfg('OPENAI_IMAGE_QUALITY', 'medium');
 
-// Pro: preset de qualidade superior (Higher image quality presets).
+// Pro: preset de qualidade superior.
 if (($user['subscription_plan'] ?? '') === 'pro' && ($user['subscription_status'] ?? '') === 'active') {
     $quality = cfg('OPENAI_IMAGE_QUALITY_PRO', 'high');
 }
 
-// ---- Validação de entrada ----
+// ---- Validação de entrada (permissiva: aceitar qualquer foto) ----
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    fail(405, 'Método não permitido.');
+    fail(405, 'Method not allowed.');
 }
 $prompt = isset($_POST['prompt']) ? trim($_POST['prompt']) : '';
-if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
-    fail(400, 'Envie uma imagem panorâmica no campo image.');
+if (!isset($_FILES['image'])) {
+    fail(400, 'Please attach a room photo.', ['code' => 'no_file']);
+}
+if ($_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+    $up = (int) $_FILES['image']['error'];
+    // Upload maior que os limites do servidor: orienta a reduzir, sem bloquear o conceito.
+    if (in_array($up, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) {
+        fail(413, 'That photo is extremely large. Please try one under ~40 MB.', ['code' => 'image_too_large']);
+    }
+    fail(400, 'The upload did not complete. Please try again.', ['code' => 'upload_failed', 'log' => 'UPLOAD_ERR ' . $up]);
 }
 if ($prompt === '') {
-    fail(400, 'Escreva uma frase descrevendo a transformação desejada.');
+    fail(400, 'Describe the transformation you want.', ['code' => 'no_prompt']);
 }
 
 $file = $_FILES['image'];
-if ($file['size'] > 20 * 1024 * 1024) {
-    fail(413, 'A imagem é grande demais. Use um arquivo menor que 20 MB.');
-}
-$finfo = new finfo(FILEINFO_MIME_TYPE);
-$mime = $finfo->file($file['tmp_name']);
-$allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
-if (!isset($allowed[$mime])) {
-    fail(400, 'Formato inválido. Use JPG, JPEG, PNG ou WEBP.');
-}
 
-// ---- Prompt base (arquitetônico + panorâmico) ----
+// ---- Pré-processamento: aceitar qualquer imagem e torná-la "segura" --------
+// Converte para JPG, auto-orienta (EXIF), reduz para um tamanho seguro mantendo
+// a proporção original. Isso reduz o tempo de geração e o tráfego, evitando o
+// timeout do gateway (causa do antigo 502).
+list($jpegPath, $srcW, $srcH, $cleanup) = preprocess_upload($file['tmp_name']);
+
+// ---- Prompt base (arquitetônico + expansão panorâmica) ----
 $BASE_PROMPT = <<<TXT
-You are an AI architectural visualization assistant for Arch3. Edit the provided panoramic interior image according to the user's request while preserving the original room's core structure, perspective, openings, wall positions, ceiling height, floor plan logic and realistic renovation constraints.
+You are an AI architectural visualization assistant for Arch3.
 
-Create a redesigned version that feels like a real architectural/interior design proposal, not a fantasy scene.
+Treat the uploaded image as the base environment. Preserve the original room structure, proportions and architecture. If the image is not panoramic, intelligently expand and reconstruct the surrounding environment so it can be displayed in an immersive panoramic viewer. Maintain realism and continuity between walls, floor, ceiling, windows and furniture.
 
-Important rules:
-- Preserve the same room and spatial structure.
-- Keep the same general camera position and panoramic feel.
-- Respect realistic renovation possibilities.
-- Do not change the room so much that it becomes impossible to recognize.
+Create a redesigned version that feels like a real architectural / interior design proposal, not a fantasy scene.
+
+Rules:
+- Preserve the same room identity and spatial logic; keep the general camera position.
+- Respect realistic renovation possibilities; avoid distorted geometry, impossible windows, warped furniture or fantasy elements.
+- You may change furniture, colors, materials, lighting, decor, rugs, curtains, plants, art, doors, windows and finishes, and add or remove furniture if asked.
 - Follow the user's requested changes closely.
-- You may change furniture, colors, materials, lighting, decor, rugs, curtains, plants, art, doors, windows and finishes.
-- You may add or remove furniture if the user asks.
-- Make the result look premium, realistic, coherent and professionally designed.
-- Avoid unrealistic architecture, distorted geometry, impossible windows, warped furniture or fantasy elements.
-- Maintain a high-end architectural visualization style.
-- Output should work as a 360° panoramic preview if the input is panoramic.
+- Produce a wide, coherent interior scene suitable for an immersive panoramic preview.
+- Fill the entire frame edge to edge with real, continuous architectural content. Do NOT add blurred side filling, vignettes, dark borders, stretched edges or duplicated pixels.
+- Keep a premium, realistic, professionally designed look.
+
+Return a wide panoramic interior image suitable for immersive 360° preview. Preserve the original room, but compose the output as a seamless wide panorama. Avoid black borders, empty areas, cropped corners, warped framing or missing visual information.
 TXT;
 
-$PANORAMIC_PROMPT = <<<TXT
-The output should preserve the original panoramic perspective and be suitable for immersive 360° viewing.
+$finalPrompt = $BASE_PROMPT . "\n\nUser request:\n" . $prompt;
 
-Do not crop the scene into a square composition.
-
-Strict framing rules:
-- The output must be a wide panoramic image.
-- Preserve the panoramic field of view of the input; do not zoom into a narrow part of the room.
-- Produce a single coherent wide interior scene suitable for 360° viewing.
-- Fill the entire frame with real, continuous architectural content edge to edge.
-- Do NOT add blurred side filling, vignettes or dark borders.
-- Do NOT stretch, smear or duplicate pixels at the edges to widen the image.
-- Avoid artificial stretched borders or out-of-focus padding of any kind.
-
-Preserve room geometry and spatial continuity.
-
-The final image should feel like a realistic architectural redesign of the same room and remain compatible with panoramic viewing.
-TXT;
-
-$finalPrompt = $BASE_PROMPT . "\n\n" . $PANORAMIC_PROMPT . "\n\nUser request:\n" . $prompt;
+// Empurra o resultado para o formato panorâmico mais largo disponível na API.
+$size = '1536x1024';
 
 // ---- Chamada à OpenAI Images Edit ----
 $ch = curl_init('https://api.openai.com/v1/images/edits');
 $post = [
-    'model' => $model,
-    'prompt' => $finalPrompt,
-    'size' => $size,
-    'quality' => $quality,
-    'output_format' => 'png',
-    'image' => new CURLFile($file['tmp_name'], $mime, $file['name'] ?: 'panorama.' . $allowed[$mime]),
+    'model'         => $model,
+    'prompt'        => $finalPrompt,
+    'size'          => $size,
+    'quality'       => $quality,
+    'output_format' => 'jpeg',
+    'image'         => new CURLFile($jpegPath, 'image/jpeg', 'room.jpg'),
 ];
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_POST => true,
-    CURLOPT_POSTFIELDS => $post,
-    CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $apiKey],
-    CURLOPT_TIMEOUT => 170,
+    CURLOPT_POST           => true,
+    CURLOPT_POSTFIELDS     => $post,
+    CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $apiKey],
+    CURLOPT_CONNECTTIMEOUT => 15,
+    CURLOPT_TIMEOUT        => 115, // dentro da janela do gateway; falha limpa em JSON antes do 502
 ]);
 $resp = curl_exec($ch);
-if ($resp === false) {
-    fail(502, 'Falha ao contatar a OpenAI: ' . curl_error($ch));
-}
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$errno = curl_errno($ch);
+$curlErr = curl_error($ch);
+$httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
+if ($cleanup && is_file($jpegPath)) {
+    @unlink($jpegPath);
+}
+
+// Erros de transporte (timeout, conexão) — motivo real, nunca 502 genérico.
+if ($resp === false || $errno !== 0) {
+    if ($errno === CURLE_OPERATION_TIMEDOUT) {
+        fail(504, 'The generation took too long this time. Please try again in a moment — a smaller photo also helps.', [
+            'code' => 'timeout',
+            'log'  => 'curl timeout: ' . $curlErr,
+        ]);
+    }
+    fail(502, 'Could not reach the image service right now. Please try again shortly.', [
+        'code' => 'api_unreachable',
+        'log'  => 'curl errno ' . $errno . ': ' . $curlErr,
+    ]);
+}
 
 $data = json_decode($resp, true);
-if ($httpCode !== 200 || !is_array($data)) {
-    $msg = $data['error']['message'] ?? ('OpenAI retornou HTTP ' . $httpCode);
-    fail(502, $msg);
-}
-$b64 = $data['data'][0]['b64_json'] ?? null;
-if (!$b64) {
-    // alguns modelos podem devolver url
-    $url = $data['data'][0]['url'] ?? null;
-    if ($url) {
-        $b64 = base64_encode(file_get_contents($url));
+
+// Erros lógicos da OpenAI — mapear para motivo claro.
+if ($httpCode !== 200 || !is_array($data) || isset($data['error'])) {
+    $apiMsg  = $data['error']['message'] ?? ('Image service returned HTTP ' . $httpCode);
+    $apiType = $data['error']['type'] ?? '';
+    $apiCode = $data['error']['code'] ?? '';
+
+    if ($httpCode === 401) {
+        fail(502, 'Image generation is temporarily unavailable (authentication). The team has been notified.', [
+            'code' => 'invalid_key', 'log' => 'OpenAI 401: ' . $apiMsg,
+        ]);
     }
+    if ($httpCode === 429 || $apiType === 'insufficient_quota' || $apiCode === 'insufficient_quota') {
+        $isBilling = ($apiType === 'insufficient_quota' || $apiCode === 'insufficient_quota');
+        fail(502, $isBilling
+            ? 'Image generation is temporarily unavailable (account quota/billing). The team has been notified.'
+            : 'The image service is busy right now. Please wait a few seconds and try again.', [
+            'code' => $isBilling ? 'quota' : 'rate_limited',
+            'log'  => 'OpenAI ' . $httpCode . ' ' . $apiType . '/' . $apiCode . ': ' . $apiMsg,
+        ]);
+    }
+    if ($httpCode === 400) {
+        // Tipicamente conteúdo/parametro/imagem — repassa motivo real.
+        fail(422, 'The image service could not process this request: ' . $apiMsg, [
+            'code' => 'api_rejected', 'log' => 'OpenAI 400: ' . $apiMsg,
+        ]);
+    }
+    fail(502, 'The image service returned an error: ' . $apiMsg, [
+        'code' => 'api_failure', 'log' => 'OpenAI ' . $httpCode . ': ' . $apiMsg,
+    ]);
+}
+
+$b64 = $data['data'][0]['b64_json'] ?? null;
+if (!$b64 && !empty($data['data'][0]['url'])) {
+    $b64 = base64_encode((string) @file_get_contents($data['data'][0]['url']));
 }
 if (!$b64) {
-    fail(502, 'A OpenAI não retornou uma imagem.');
+    fail(502, 'The image service did not return an image. Please try again.', [
+        'code' => 'empty_result', 'log' => 'no b64/url in OpenAI response',
+    ]);
 }
 $imageBinary = base64_decode($b64);
+unset($b64, $data, $resp); // libera memória
 
-// ---- Preparação do panorama (sem blur/stretch/fill agressivo) ----
-list($panoBinary, $w, $h, $isPanoramic) = preparePanorama($imageBinary);
+// ---- Normaliza para entrega leve (JPEG) + detecta proporção panorâmica ----
+list($outBinary, $w, $h, $isPanoramic, $outMime) = finalize_result($imageBinary);
+unset($imageBinary);
 
 // ---- Consome 1 crédito (somente após geração bem-sucedida) ----
-// Guard atômico: o UPDATE só decrementa se ainda houver crédito, evitando
-// saldo negativo em requisições concorrentes.
 $consume = $pdo->prepare(
     'UPDATE users
         SET credits_remaining = credits_remaining - 1,
@@ -175,78 +259,125 @@ $pdo->prepare('INSERT INTO generations (user_id, created_at, prompt) VALUES (:ui
     ->execute([':uid' => $user['id'], ':t' => date('Y-m-d H:i:s'), ':p' => mb_substr($prompt, 0, 1000)]);
 
 $creditsLeft = max(0, (int) $user['credits_remaining'] - 1);
-
 $aspect = $h > 0 ? round($w / $h, 3) : 0;
 
-echo json_encode([
-    'imageUrl' => 'data:image/png;base64,' . base64_encode($panoBinary),
-    'mimeType' => 'image/png',
-    'fileName' => 'arch3-panorama.png',
-    'width' => $w,
-    'height' => $h,
-    'aspect' => $aspect,
-    // true => panorama 360 real (abre direto no viewer).
-    // false => não panorâmico: frontend mostra aviso honesto + 360 opcional.
+ok_json([
+    'imageUrl' => 'data:' . $outMime . ';base64,' . base64_encode($outBinary),
+    'mimeType' => $outMime,
+    'fileName' => 'arch3-result.jpg',
+    'width'    => $w,
+    'height'   => $h,
+    'aspect'   => $aspect,
     'panoramic' => $isPanoramic,
-    'notice' => $isPanoramic ? null : 'For best 360° results, upload a complete panoramic photo.',
+    'notice'   => $isPanoramic
+        ? null
+        : 'For the most immersive experience, upload a full panorama. Standard photos are also supported.',
     'provider' => 'openai',
     'credits_remaining' => $creditsLeft,
 ]);
 
+// ===========================================================================
+// Helpers
+// ===========================================================================
+
 /**
- * Política de panorama SEM preenchimento artificial agressivo.
+ * Aceita qualquer imagem e a prepara para a OpenAI:
+ *   - auto-orienta (EXIF),
+ *   - remove metadados,
+ *   - reduz para um lado máximo seguro mantendo a proporção,
+ *   - converte para JPEG comprimido.
+ * NUNCA rejeita por resolução, pixels ou proporção. Sem Imagick, usa o arquivo
+ * original como fallback.
  *
- * Antes, imagens não-panorâmicas eram coladas no centro de um canvas 2:1 com
- * fundo desfocado/escurecido — o que gerava as faixas borradas nas laterais.
- * Isso foi removido. Agora:
- *
- *   - Aspecto >= PANO_OK  -> panorama 360 de verdade: só normaliza para PNG.
- *   - Aspecto <  PANO_OK  -> NÃO expande com blur/stretch. Devolve a imagem
- *                            limpa, no aspecto nativo, marcada como
- *                            não-panorâmica. O frontend mostra um aviso honesto
- *                            e oferece o 360 opcional (campo de visão parcial,
- *                            sem distorção e sem bordas borradas).
- *
- * A expansão real das laterais (outpainting) fica em expandPanoramaOutpaint()
- * — preparada para o futuro, intencionalmente NÃO usada aqui.
- *
- * @return array{0:string,1:int,2:int,3:bool} [pngBinary, width, height, isPanoramic]
+ * @return array{0:string,1:int,2:int,3:bool} [jpegPath, width, height, isTemp]
  */
-function preparePanorama($pngBinary) {
-    $PANO_OK = 1.9; // a partir daqui consideramos um panorama 360 real
+function preprocess_upload($srcPath) {
+    $MAX_SIDE = 1536; // lado máximo enviado à OpenAI (rápido e suficiente)
 
     if (!extension_loaded('imagick')) {
-        $size = @getimagesizefromstring($pngBinary);
-        $w = $size[0] ?? 0;
-        $h = $size[1] ?? 0;
-        $aspect = $h > 0 ? $w / $h : 0;
-        return [$pngBinary, $w, $h, $aspect >= $PANO_OK];
+        return [$srcPath, 0, 0, false];
     }
 
-    $im = new Imagick();
-    $im->readImageBlob($pngBinary);
-    $w = $im->getImageWidth();
-    $h = $im->getImageHeight();
-    $aspect = $h > 0 ? $w / $h : 0;
+    try {
+        $im = new Imagick();
+        $im->readImage($srcPath);
+        $im->setFirstIterator();
 
-    // Sempre devolve a imagem nativa, apenas normalizada para PNG.
-    // Nenhum blur, nenhum stretch, nenhuma faixa lateral.
-    $im->setImageFormat('png');
-    $out = $im->getImageBlob();
-    $im->clear();
+        // Auto-orientação por EXIF, depois remove metadados.
+        if (method_exists($im, 'autoOrient')) {
+            @$im->autoOrient();
+        }
+        $im->stripImage();
 
-    return [$out, $w, $h, $aspect >= $PANO_OK];
+        $w = $im->getImageWidth();
+        $h = $im->getImageHeight();
+        $maxDim = max($w, $h);
+        if ($maxDim > $MAX_SIDE) {
+            $scale = $MAX_SIDE / $maxDim;
+            $im->resizeImage((int) round($w * $scale), (int) round($h * $scale), Imagick::FILTER_LANCZOS, 1);
+            $w = $im->getImageWidth();
+            $h = $im->getImageHeight();
+        }
+
+        $im->setImageBackgroundColor(new ImagickPixel('white'));
+        if (method_exists($im, 'mergeImageLayers')) {
+            $im = $im->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
+        } else {
+            $im->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
+        }
+        $im->setImageFormat('jpeg');
+        $im->setImageCompression(Imagick::COMPRESSION_JPEG);
+        $im->setImageCompressionQuality(88);
+
+        $tmp = tempnam(sys_get_temp_dir(), 'arch3_') . '.jpg';
+        $im->writeImage($tmp);
+        $im->clear();
+        $im->destroy();
+        return [$tmp, $w, $h, true];
+    } catch (Throwable $e) {
+        error_log('[arch3] preprocess fallback: ' . $e->getMessage());
+        return [$srcPath, 0, 0, false];
+    }
 }
 
 /**
- * (FUTURO — stub) Expansão real das laterais por outpainting.
+ * Normaliza o resultado da OpenAI para entrega leve (JPEG de qualidade alta) e
+ * detecta se a proporção é panorâmica (>= ~1.9:1) para abrir o viewer 360.
  *
- * Objetivo: pedir à API de imagem que ESTENDA a cena para os lados de forma
- * coerente (mesma sala, mesma iluminação, mesma perspectiva), produzindo um
- * equiretangular ~2:1 — sem blur, sem stretch e sem bordas artificiais.
- *
- * Mantido como stub: NÃO é chamado hoje. Lança exceção se invocado por engano.
+ * @return array{0:string,1:int,2:int,3:bool,4:string} [binary,w,h,isPanoramic,mime]
  */
-function expandPanoramaOutpaint($pngBinary, array $opts = []) {
-    throw new RuntimeException('Real side outpainting is not implemented yet.');
+function finalize_result($binary) {
+    $PANO_OK = 1.9;
+
+    if (!extension_loaded('imagick')) {
+        $size = @getimagesizefromstring($binary);
+        $w = $size[0] ?? 0;
+        $h = $size[1] ?? 0;
+        $aspect = $h > 0 ? $w / $h : 0;
+        $mime = $size['mime'] ?? 'image/jpeg';
+        return [$binary, $w, $h, $aspect >= $PANO_OK, $mime];
+    }
+
+    try {
+        $im = new Imagick();
+        $im->readImageBlob($binary);
+        $w = $im->getImageWidth();
+        $h = $im->getImageHeight();
+        $aspect = $h > 0 ? $w / $h : 0;
+
+        $im->setImageFormat('jpeg');
+        $im->setImageCompression(Imagick::COMPRESSION_JPEG);
+        $im->setImageCompressionQuality(90);
+        $out = $im->getImageBlob();
+        $im->clear();
+        $im->destroy();
+        return [$out, $w, $h, $aspect >= $PANO_OK, 'image/jpeg'];
+    } catch (Throwable $e) {
+        error_log('[arch3] finalize fallback: ' . $e->getMessage());
+        $size = @getimagesizefromstring($binary);
+        $w = $size[0] ?? 0;
+        $h = $size[1] ?? 0;
+        $aspect = $h > 0 ? $w / $h : 0;
+        return [$binary, $w, $h, $aspect >= $PANO_OK, 'image/png'];
+    }
 }

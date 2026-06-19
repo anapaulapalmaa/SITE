@@ -26,6 +26,14 @@ if (!$user || !password_verify($pass, $user['password_hash'])) {
     json_fail('Invalid email or password.', 401);
 }
 
+// E-mail precisa estar verificado antes de liberar login (exceto admin).
+if ((int) ($user['email_verified'] ?? 0) !== 1 && !is_admin_email($email)) {
+    json_fail('Please verify your email before logging in.', 403, [
+        'code'  => 'email_unverified',
+        'email' => $email,
+    ]);
+}
+
 // Promove a admin se o e-mail bater com ADMIN_EMAIL (caso tenha mudado).
 if (is_admin_email($email) && (int) $user['is_admin'] !== 1) {
     $pdo->prepare('UPDATE users SET is_admin = 1 WHERE id = :id')->execute([':id' => $user['id']]);

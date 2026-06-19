@@ -36,7 +36,7 @@ No HostGator, o conteúdo público fica em `public_html/`:
 | `php-backend/lib/*.php`      | `public_html/api/lib/`               |
 | `php-backend/arch3-config.example.php` → `arch3-config.php` | `/home/SEU_USUARIO/` (FORA do public_html) |
 
-O pacote pronto para upload é gerado em `dist/arch3-hostgator-upload.zip`
+O pacote pronto para upload é gerado em `dist/arch3-net-upload.zip`
 (veja `dist/arch3-hostgator/README_UPLOAD.txt` para o passo a passo).
 
 ## Configuração (arch3-config.php, na HOME, fora do public_html)
@@ -44,6 +44,10 @@ O pacote pronto para upload é gerado em `dist/arch3-hostgator-upload.zip`
 - `OPENAI_API_KEY` — chave da OpenAI (geração de imagem).
 - `DB_HOST` / `DB_NAME` / `DB_USER` / `DB_PASS` — banco MySQL do cPanel.
 - `ADMIN_EMAIL` — quem logar com este e-mail vê `arch3.net/admin` e a lista de leads.
+- `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASS` / `MAIL_FROM` —
+  caixa de e-mail do cPanel para enviar o **código de verificação de cadastro**.
+  Use `SMTP_HOST = localhost` (evita o DNS da Cloudflare). Sem isso, o envio cai
+  no fallback `mail()`. O cadastro só libera o crédito grátis após confirmar o código.
 
 As tabelas (`users`, `generations`, `purchases`) são criadas automaticamente no
 primeiro acesso — não é preciso importar `.sql`.

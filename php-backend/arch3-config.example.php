@@ -25,8 +25,18 @@ return [
     'ADMIN_EMAIL' => 'gutecla@gmail.com',
     'SESSION_NAME' => 'arch3_session',
 
-    // ---- Notificação de novos cadastros (PHP mail) ----
-    'MAIL_FROM' => 'no-reply@arch3.net',
+    // ---- E-mail (verificação de cadastro + notificação de novos cadastros) ----
+    // SMTP autenticado do cPanel. DICA: use 'localhost' como host — o PHP roda
+    // no mesmo servidor do mailserver, evitando o DNS da Cloudflare (arch3.net).
+    // Com SMTP_* preenchido, os códigos de verificação saem por SMTP; caso
+    // contrário cai no fallback mail() (best-effort, costuma ir para spam).
+    'SMTP_HOST'      => 'localhost',        // recomendado; alternativa: 'arch3.net'
+    'SMTP_PORT'      => 465,                 // 465 = SSL | 587 = STARTTLS
+    'SMTP_SECURE'    => 'ssl',               // 'ssl' (465) | 'tls' (587)
+    'SMTP_USER'      => 'sac@arch3.net',     // caixa de e-mail do cPanel
+    'SMTP_PASS'      => 'senha-da-caixa',    // senha da caixa (só no servidor)
+    'MAIL_FROM'      => 'sac@arch3.net',     // remetente
+    'MAIL_FROM_NAME' => 'Arch3',
     'NOTIFY_SIGNUPS' => true,
 
     // ---- Stripe (pronto para integrar; deixe vazio enquanto não usa) ----

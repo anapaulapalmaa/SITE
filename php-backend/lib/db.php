@@ -37,6 +37,19 @@ function arch3_db(): PDO
     return $pdo;
 }
 
+/** Adiciona uma coluna se ela ainda não existir (migração idempotente). */
+function arch3_add_column(PDO $pdo, string $table, string $column, string $definition): void
+{
+    $stmt = $pdo->prepare(
+        'SELECT COUNT(*) FROM information_schema.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :t AND COLUMN_NAME = :c'
+    );
+    $stmt->execute([':t' => $table, ':c' => $column]);
+    if ((int) $stmt->fetchColumn() === 0) {
+        $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$definition}");
+    }
+}
+
 function arch3_db_init(PDO $pdo): void
 {
     static $done = false;
@@ -60,6 +73,8 @@ function arch3_db_init(PDO $pdo): void
             subscription_renews_at DATETIME NULL,
             stripe_customer_id    VARCHAR(120) NULL,
             country               VARCHAR(80) NULL,
+            user_type             VARCHAR(40) NULL,
+            primary_environment   VARCHAR(60) NULL,
             email_verified        TINYINT(1) NOT NULL DEFAULT 0,
             email_verify_token    VARCHAR(64) NULL,
             is_admin              TINYINT(1) NOT NULL DEFAULT 0,
@@ -67,6 +82,16 @@ function arch3_db_init(PDO $pdo): void
             UNIQUE KEY uniq_email (email)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
+
+    // Migração leve: garante colunas novas em bancos já existentes.
+    arch3_add_column($pdo, 'users', 'user_type', 'VARCHAR(40) NULL');
+    arch3_add_column($pdo, 'users', 'primary_environment', 'VARCHAR(60) NULL');
+    // Verificação de e-mail.
+    arch3_add_column($pdo, 'users', 'verification_code_hash', 'VARCHAR(255) NULL');
+    arch3_add_column($pdo, 'users', 'verification_code_expires_at', 'DATETIME NULL');
+    arch3_add_column($pdo, 'users', 'verification_attempts', 'INT UNSIGNED NOT NULL DEFAULT 0');
+    arch3_add_column($pdo, 'users', 'verification_resend_count', 'INT UNSIGNED NOT NULL DEFAULT 0');
+    arch3_add_column($pdo, 'users', 'last_verification_sent_at', 'DATETIME NULL');
 
     // Histórico de gerações — alimenta a métrica Total Generations.
     $pdo->exec("

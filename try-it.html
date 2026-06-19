@@ -526,6 +526,13 @@
     }
     .auth-input::placeholder { color: rgba(203,213,225,0.5); }
     .auth-input:focus { border-color:#8B5CF6; box-shadow: 0 0 0 3px rgba(139,92,246,0.18); }
+    select.auth-input {
+      -webkit-appearance:none; appearance:none; cursor:pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position: right 15px center; padding-right: 40px;
+    }
+    select.auth-input option { color:#1e293b; background:#fff; }
+    select.auth-input:invalid { color: rgba(203,213,225,0.5); }
     .auth-error { color:#fca5a5; font-size:13.5px; margin-top: 4px; min-height: 0; }
     .auth-switch { text-align:center; margin-top:16px; font-size:13.5px; color: var(--text-muted); }
     .auth-switch button { background:none; border:none; color: var(--accent-purple); font-weight:600; cursor:pointer; }
@@ -692,18 +699,19 @@
         </p>
 
         <div class="callout" style="margin-top: 16px;">
-          <strong>Important:</strong> Use your phone's panorama mode and rotate slowly around your
-          own axis. The more complete the panorama, the better the 360° result.
+          <strong>Tip:</strong> Panoramic photos provide the best results, but any room photo can be
+          transformed. For the most immersive experience, use your phone's panorama mode and rotate
+          slowly around your own axis — standard photos are fully supported too.
         </div>
 
         <!-- Dropzone -->
         <label class="dropzone" id="dropzone">
-          <input id="imageInput" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" hidden>
+          <input id="imageInput" type="file" accept="image/*" hidden>
           <div class="dropzone-empty" id="dropzoneEmpty">
             <div class="dropzone-icon">⬆</div>
-            <h4>Drag &amp; drop your panorama</h4>
-            <p class="helper-text">Accepted: .jpg, .jpeg, .png, .webp · up to 20 MB</p>
-            <span class="btn-secondary" style="margin-top: 14px;">Choose Panorama</span>
+            <h4>Drag &amp; drop your room photo</h4>
+            <p class="helper-text">Any room photo works — panoramas give the most immersive 360° result.</p>
+            <span class="btn-secondary" style="margin-top: 14px;">Choose Photo</span>
           </div>
           <div class="dropzone-preview" id="dropzonePreview" hidden>
             <img id="previewImg" alt="Selected panorama preview">
@@ -835,6 +843,29 @@
         <div class="auth-field">
           <input class="auth-input" id="authPassword" type="password" name="password" placeholder="Password" autocomplete="current-password">
         </div>
+        <div class="auth-field" id="userTypeField">
+          <select class="auth-input" id="authUserType" name="user_type">
+            <option value="" disabled selected>I am a… (user type)</option>
+            <option>Homeowner</option>
+            <option>Architect</option>
+            <option>Interior Designer</option>
+            <option>Real Estate</option>
+            <option>Student</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="auth-field" id="environmentField">
+          <select class="auth-input" id="authEnvironment" name="primary_environment">
+            <option value="" disabled selected>Main space to redesign</option>
+            <option>Living Room</option>
+            <option>Bedroom</option>
+            <option>Kitchen</option>
+            <option>Office</option>
+            <option>Bathroom</option>
+            <option>Entire Home</option>
+            <option>Other</option>
+          </select>
+        </div>
         <p class="auth-error" id="authError"></p>
         <button class="btn-primary w-full justify-center" id="authSubmit" type="submit" style="width:100%; justify-content:center; margin-top:6px;">
           Create account <span>→</span>
@@ -843,6 +874,34 @@
 
       <p class="auth-switch" id="authSwitch">
         Already have an account? <button type="button" id="switchToLogin">Log in</button>
+      </p>
+    </div>
+  </div>
+
+  <!-- VERIFY EMAIL MODAL -->
+  <div class="modal-overlay" id="verifyModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="verifyTitle">
+      <button class="modal-close" id="verifyClose" aria-label="Close">✕</button>
+      <p class="eyebrow">Almost there</p>
+      <h2 class="text-2xl font-bold mt-2" id="verifyTitle">Verify your email</h2>
+      <p class="helper-text" style="margin-top:6px;" id="verifySubtitle">
+        We sent a verification code to your email. Enter the code below to activate your account
+        and receive your free generation credit.
+      </p>
+      <form id="verifyForm" novalidate>
+        <div class="auth-field" style="margin-top:14px;">
+          <input class="auth-input" id="verifyCode" type="text" inputmode="numeric" autocomplete="one-time-code"
+                 maxlength="6" placeholder="Verification code"
+                 style="text-align:center; letter-spacing:0.4em; font-size:20px;">
+        </div>
+        <p class="auth-error" id="verifyError"></p>
+        <button class="btn-primary w-full justify-center" id="verifySubmit" type="submit"
+                style="width:100%; justify-content:center; margin-top:6px;">
+          Verify Account <span>→</span>
+        </button>
+      </form>
+      <p class="auth-switch">
+        Didn't get it? <button type="button" id="resendCodeBtn">Resend Code</button>
       </p>
     </div>
   </div>
@@ -1037,6 +1096,8 @@
       $('tabRegister').classList.toggle('is-active', reg);
       $('tabLogin').classList.toggle('is-active', !reg);
       $('nameField').style.display = reg ? 'block' : 'none';
+      $('userTypeField').style.display = reg ? 'block' : 'none';
+      $('environmentField').style.display = reg ? 'block' : 'none';
       $('authTitle').textContent = reg ? 'Create your account' : 'Welcome back';
       $('authSubtitle').textContent = reg
         ? 'Sign up to claim your free generation and start redesigning your space.'
@@ -1068,6 +1129,64 @@
       $('lockoutModal').classList.remove('is-open');
       $('lockoutModal').setAttribute('aria-hidden', 'true');
     }
+
+    // ---------- Verify email modal ----------
+    let pendingVerifyEmail = '';
+    function openVerify(email, note) {
+      if (email) pendingVerifyEmail = email;
+      // Hide the auth modal if it's open, then show verify.
+      $('authModal').classList.remove('is-open');
+      $('authModal').setAttribute('aria-hidden', 'true');
+      $('verifyError').textContent = '';
+      $('verifyCode').value = '';
+      $('verifySubtitle').textContent = note
+        || 'We sent a verification code to your email. Enter the code below to activate your account and receive your free generation credit.';
+      $('verifyModal').classList.add('is-open');
+      $('verifyModal').setAttribute('aria-hidden', 'false');
+      setTimeout(() => $('verifyCode').focus(), 50);
+    }
+    function closeVerify() {
+      $('verifyModal').classList.remove('is-open');
+      $('verifyModal').setAttribute('aria-hidden', 'true');
+    }
+
+    $('verifyClose').addEventListener('click', closeVerify);
+    $('verifyModal').addEventListener('click', (e) => { if (e.target.id === 'verifyModal') closeVerify(); });
+
+    $('verifyForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      $('verifyError').textContent = '';
+      const code = $('verifyCode').value.replace(/\D+/g, '');
+      if (code.length < 6) { $('verifyError').textContent = 'Enter the 6-digit code from your email.'; return; }
+      $('verifySubmit').disabled = true;
+      const { ok, data } = await api('/api/auth-verify.php', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: pendingVerifyEmail, code }),
+      });
+      $('verifySubmit').disabled = false;
+      if (!ok) { $('verifyError').textContent = data.error || 'Invalid verification code. Please try again.'; return; }
+      currentUser = data.user;
+      renderAccount();
+      const resume = pendingGenerate;
+      closeVerify();
+      const first = (currentUser.name || '').split(' ')[0];
+      toast(`Welcome${first ? ', ' + first : ''}! Your account is active — you have ${currentUser.credits_remaining} free generation.`);
+      if (resume) { const g = $('generateButton'); if (g && !g.disabled) g.click(); }
+    });
+
+    $('resendCodeBtn').addEventListener('click', async () => {
+      if (!pendingVerifyEmail) return;
+      $('verifyError').textContent = '';
+      const btn = $('resendCodeBtn');
+      btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Sending…';
+      const { ok, data } = await api('/api/auth-resend.php', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: pendingVerifyEmail }),
+      });
+      btn.disabled = false; btn.textContent = orig;
+      if (!ok) { $('verifyError').textContent = data.error || 'Could not resend the code. Please try again shortly.'; return; }
+      toast('A new verification code is on its way to your email.');
+    });
 
     // ---------- Buy / checkout ----------
     async function buy(planId, btn) {
@@ -1159,30 +1278,54 @@
       const name = $('authName').value.trim();
       const email = $('authEmail').value.trim();
       const password = $('authPassword').value;
+      const userType = $('authUserType').value;
+      const primaryEnvironment = $('authEnvironment').value;
 
       if (authMode === 'register' && name.length < 2) { $('authError').textContent = 'Please enter your name.'; return; }
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { $('authError').textContent = 'Please enter a valid email address.'; return; }
       if (password.length < 6) { $('authError').textContent = 'Password must be at least 6 characters.'; return; }
+      if (authMode === 'register' && !userType) { $('authError').textContent = 'Please select your user type.'; return; }
+      if (authMode === 'register' && !primaryEnvironment) { $('authError').textContent = 'Please select your main space.'; return; }
 
       $('authSubmit').disabled = true;
       const path = authMode === 'register' ? '/api/auth-register.php' : '/api/auth-login.php';
-      const body = authMode === 'register' ? { name, email, password } : { email, password };
+      const body = authMode === 'register'
+        ? { name, email, password, user_type: userType, primary_environment: primaryEnvironment }
+        : { email, password };
       const { ok, data } = await api(path, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
       });
       $('authSubmit').disabled = false;
 
-      if (!ok) { $('authError').textContent = data.error || 'Something went wrong. Please try again.'; return; }
+      if (!ok) {
+        // Login attempt on an unverified account → route to the verify step.
+        if (data.code === 'email_unverified') {
+          $('authForm').reset();
+          openVerify(data.email || email, 'Please verify your email before logging in. Enter the code we sent you, or request a new one.');
+          return;
+        }
+        $('authError').textContent = data.error || 'Something went wrong. Please try again.';
+        return;
+      }
 
+      // Registration → email verification step (no login/credit yet).
+      if (data.status === 'verify') {
+        const note = data.email_sent === false
+          ? 'We could not confirm the email was delivered. Tap "Resend Code" if it does not arrive, then enter the code to activate your account.'
+          : 'We sent a verification code to your email. Enter the code below to activate your account and receive your free generation credit.';
+        openVerify(data.email || email, note);
+        $('authForm').reset();
+        return;
+      }
+
+      // Login success.
       currentUser = data.user;
       renderAccount();
       const resume = pendingGenerate;
       closeAuth();
       $('authForm').reset();
       const first = (currentUser.name || '').split(' ')[0];
-      toast(authMode === 'register'
-        ? `Welcome${first ? ', ' + first : ''}! You have ${currentUser.credits_remaining} free generation.`
-        : 'Signed in.');
+      toast('Signed in.');
       if (resume) { const g = $('generateButton'); if (g && !g.disabled) g.click(); }
     });
 
@@ -1199,6 +1342,7 @@
         if (currentUser) { currentUser.credits_remaining = Number(n); renderAccount(); }
       },
       openLockout,
+      openVerify,
       getUser: () => currentUser,
     };
 
@@ -1298,15 +1442,9 @@
 
     const acceptFile = (file) => {
       if (!file) return;
-      const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
-      if (!allowedTypes.has(file.type)) {
-        setError('Invalid format. Use JPG, JPEG, PNG or WEBP.');
-        return;
-      }
-      if (file.size > 20 * 1024 * 1024) {
-        setError('Image is too large. Use a file smaller than 20 MB.');
-        return;
-      }
+      // Always accept: any room photo is welcome. The server optimizes the image
+      // (auto-converts to JPG and right-sizes it) and adapts non-panoramic photos,
+      // so we never reject by format, resolution, pixels or aspect ratio here.
       setError('');
       selectedFile = file;
       if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -1377,6 +1515,70 @@
       try { viewer.destroy(); } catch { /* ignore */ }
       viewer = null; gyroPlugin = null; gyroEnabled = false;
     };
+
+    // Normalize ANY image into a seamless 2:1 equirectangular texture so the 360
+    // sphere is ALWAYS fully covered — no black/empty areas, no transparency.
+    // Wide images fill the frame (cover); other shapes get a blurred, darkened
+    // copy of themselves as background with the sharp image blended on top.
+    const normalizeToPanorama360 = (imageUrl) => new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const w = img.naturalWidth || img.width;
+          const h = img.naturalHeight || img.height;
+          const aspect = h > 0 ? w / h : 2;
+
+          // Output is always strictly 2:1, bounded for performance/memory.
+          let outW = Math.min(4096, Math.max(2048, Math.round(aspect >= 1.8 ? w : h * 2)));
+          outW -= outW % 2;
+          const outH = Math.round(outW / 2);
+
+          const canvas = document.createElement('canvas');
+          canvas.width = outW; canvas.height = outH;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#1a1f33'; // safety base (never pure black), overwritten below
+          ctx.fillRect(0, 0, outW, outH);
+
+          const fit = (iw, ih, bw, bh, mode) => {
+            const s = mode === 'cover' ? Math.max(bw / iw, bh / ih) : Math.min(bw / iw, bh / ih);
+            const dw = iw * s, dh = ih * s;
+            return { dw, dh, dx: (bw - dw) / 2, dy: (bh - dh) / 2 };
+          };
+
+          // 1) Background: the image scaled to COVER, blurred + slightly darkened.
+          //    Drawn oversized so the blur never reveals transparent edges.
+          ctx.save();
+          ctx.filter = 'blur(36px) brightness(0.62) saturate(1.06)';
+          const bg = fit(w, h, outW, outH, 'cover');
+          ctx.drawImage(img, bg.dx - 80, bg.dy - 80, bg.dw + 160, bg.dh + 160);
+          ctx.restore();
+
+          if (aspect >= 1.8) {
+            // Wide enough: place the sharp image as COVER — fills the whole frame.
+            const fg = fit(w, h, outW, outH, 'cover');
+            ctx.drawImage(img, fg.dx, fg.dy, fg.dw, fg.dh);
+          } else {
+            // Soft halo (blurred, slightly larger) then the sharp CONTAIN image,
+            // for a smooth blend into the background — no hard borders.
+            const fg = fit(w, h, outW, outH, 'contain');
+            const grow = 0.06;
+            ctx.save();
+            ctx.filter = 'blur(12px) brightness(0.85)';
+            ctx.drawImage(img,
+              fg.dx - (fg.dw * grow) / 2, fg.dy - (fg.dh * grow) / 2,
+              fg.dw * (1 + grow), fg.dh * (1 + grow));
+            ctx.restore();
+            ctx.drawImage(img, fg.dx, fg.dy, fg.dw, fg.dh);
+          }
+
+          resolve(canvas.toDataURL('image/jpeg', 0.9));
+        } catch (e) {
+          resolve(imageUrl); // extremely rare — fall back to the raw image
+        }
+      };
+      img.onerror = () => resolve(imageUrl);
+      img.src = imageUrl;
+    });
 
     // For a NON-panoramic image, place it honestly inside a partial field of
     // view (~135° × 90°) instead of stretching it across the full sphere. The
@@ -1471,9 +1673,9 @@
     };
     gyroButton.addEventListener('click', enableGyro);
 
-    // Opt-in 360 for a non-panoramic result: partial field of view, no stretch.
+    // lastResultUrl is already a normalized 2:1 panorama — mount it full-sphere.
     view360Btn.addEventListener('click', () => {
-      if (lastResultUrl) mountViewer(lastResultUrl, true);
+      if (lastResultUrl) mountViewer(lastResultUrl);
     });
 
     // ---------- Fullscreen ----------
@@ -1542,13 +1744,17 @@
         if (raw) {
           try { payload = JSON.parse(raw); }
           catch {
-            throw new Error(`The generator returned an unexpected response (HTTP ${response.status}). It may be restarting — please try again in a moment.`);
+            // Non-JSON body = a gateway/proxy page (rare now). Give a clear, honest reason.
+            throw new Error('The image service is taking longer than usual right now. Please try again in a moment — a smaller photo also helps.');
           }
         } else {
-          throw new Error(`The generator is waking up (HTTP ${response.status}). Please wait ~1 minute and click Generate again.`);
+          throw new Error('The image service returned an empty response. Please try again in a moment.');
         }
         if (!response.ok) {
           if (payload.code === 'auth_required' && window.Arch3) window.Arch3.requireLogin();
+          if (payload.code === 'email_unverified' && window.Arch3 && window.Arch3.openVerify) {
+            window.Arch3.openVerify();
+          }
           if (payload.code === 'no_credits' && window.Arch3) {
             window.Arch3.setCredits(0);
             window.Arch3.openLockout();
@@ -1558,14 +1764,12 @@
 
         loadingStep.textContent = loadingSteps[loadingSteps.length - 1];
         loadingBar.style.width = '100%';
-        lastResultUrl = payload.imageUrl;
-        // Real panorama -> open the 360 viewer directly.
-        // Not panoramic -> show an honest clean image + tip (no blurred fill).
-        if (payload.panoramic === false) {
-          showFlatResult(payload.imageUrl, payload.notice);
-        } else {
-          mountViewer(payload.imageUrl);
-        }
+        // ALWAYS normalize to a seamless 2:1 panorama before the viewer, whatever
+        // shape the generated image has. This guarantees the 360 sphere is fully
+        // covered — no black/empty areas — even for non-panoramic results.
+        const panoUrl = await normalizeToPanorama360(payload.imageUrl);
+        lastResultUrl = panoUrl;
+        mountViewer(panoUrl);
         if (window.Arch3 && typeof payload.credits_remaining === 'number') {
           window.Arch3.setCredits(payload.credits_remaining);
         }

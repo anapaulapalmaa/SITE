@@ -15,6 +15,14 @@ $name  = trim((string) ($in['name'] ?? ''));
 $email = strtolower(trim((string) ($in['email'] ?? '')));
 $pass  = (string) ($in['password'] ?? '');
 
+// Captura de lead: tipo de usuário e ambiente principal (listas controladas).
+$USER_TYPES = ['Homeowner', 'Architect', 'Interior Designer', 'Real Estate', 'Student', 'Other'];
+$ENVIRONMENTS = ['Living Room', 'Bedroom', 'Kitchen', 'Office', 'Bathroom', 'Entire Home', 'Other'];
+$userType = trim((string) ($in['user_type'] ?? ''));
+$primaryEnv = trim((string) ($in['primary_environment'] ?? ''));
+$userType = in_array($userType, $USER_TYPES, true) ? $userType : null;
+$primaryEnv = in_array($primaryEnv, $ENVIRONMENTS, true) ? $primaryEnv : null;
+
 if ($name === '' || mb_strlen($name) < 2) {
     json_fail('Please enter your name.');
 }
@@ -33,40 +41,49 @@ if ($stmt->fetch()) {
     json_fail('An account with this email already exists. Try logging in.', 409);
 }
 
-$free = arch3_plan('free');
 $now = now_str();
 $country = detect_country();
-$token = bin2hex(random_bytes(16)); // estrutura pronta para confirmação de e-mail futura
+$token = bin2hex(random_bytes(16));
 $isAdmin = is_admin_email($email) ? 1 : 0;
+
+// Verificação de e-mail obrigatória: crédito grátis só após confirmar o código.
+// A conta nasce com 0 crédito e email_verified=0; não inicia sessão aqui.
+$code = arch3_generate_code();
+$codeHash = password_hash($code, PASSWORD_DEFAULT);
+$expires = date('Y-m-d H:i:s', time() + 15 * 60);
 
 $stmt = $pdo->prepare(
     'INSERT INTO users
         (name, email, password_hash, created_at, credits_remaining, generations_used,
-         subscription_plan, subscription_status, country, email_verified, email_verify_token, is_admin)
+         subscription_plan, subscription_status, country, user_type, primary_environment,
+         email_verified, email_verify_token, is_admin,
+         verification_code_hash, verification_code_expires_at, verification_attempts,
+         verification_resend_count, last_verification_sent_at)
      VALUES
-        (:name, :email, :hash, :created, :credits, 0,
-         :plan, :status, :country, 0, :token, :admin)'
+        (:name, :email, :hash, :created, 0, 0,
+         :plan, :status, :country, :utype, :penv, 0, :token, :admin,
+         :chash, :cexp, 0, 0, :csent)'
 );
 $stmt->execute([
     ':name'    => $name,
     ':email'   => $email,
     ':hash'    => password_hash($pass, PASSWORD_DEFAULT),
     ':created' => $now,
-    ':credits' => $free['credits'],
     ':plan'    => 'free',
     ':status'  => 'inactive',
     ':country' => $country,
+    ':utype'   => $userType,
+    ':penv'    => $primaryEnv,
     ':token'   => $token,
     ':admin'   => $isAdmin,
+    ':chash'   => $codeHash,
+    ':cexp'    => $expires,
+    ':csent'   => $now,
 ]);
 $id = (int) $pdo->lastInsertId();
 
-// Inicia a sessão.
-session_boot();
-session_regenerate_id(true);
-$_SESSION['user_id'] = $id;
-
-// Notifica o administrador (best-effort).
+// Envia o código por e-mail (best-effort) e notifica o admin do novo cadastro.
+$sent = send_verification_email($email, $code);
 notify_admin_signup([
     'name'       => $name,
     'email'      => $email,
@@ -74,6 +91,10 @@ notify_admin_signup([
     'created_at' => $now,
 ]);
 
-$stmt = $pdo->prepare('SELECT * FROM users WHERE id = :id');
-$stmt->execute([':id' => $id]);
-json_out(['user' => user_public($stmt->fetch())]);
+// NÃO loga o usuário ainda — ele precisa inserir o código primeiro.
+json_out([
+    'status'     => 'verify',
+    'email'      => $email,
+    'email_sent' => (bool) $sent,
+    'message'    => 'We sent a verification code to your email.',
+]);
