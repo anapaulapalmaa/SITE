@@ -1522,6 +1522,9 @@
     // copy of themselves as background with the sharp image blended on top.
     const normalizeToPanorama360 = (imageUrl) => new Promise((resolve) => {
       const img = new Image();
+      // Same-origin data URIs are the norm; only tag cross-origin URLs so the
+      // canvas stays readable (toDataURL) instead of throwing and falling back.
+      if (!/^data:/i.test(imageUrl)) img.crossOrigin = 'anonymous';
       img.onload = () => {
         try {
           const w = img.naturalWidth || img.width;
@@ -1580,43 +1583,10 @@
       img.src = imageUrl;
     });
 
-    // For a NON-panoramic image, place it honestly inside a partial field of
-    // view (~135° × 90°) instead of stretching it across the full sphere. The
-    // uncovered area stays as the neutral stage background — no blur, no smear.
-    const computePanoData = (image) => {
-      const w = image.naturalWidth || image.width;
-      const h = image.naturalHeight || image.height;
-      const fullHeight = h * 2;          // image spans ~90° vertically
-      const fullWidth = fullHeight * 2;  // equirectangular is always 2:1
-      return {
-        fullWidth, fullHeight,
-        croppedWidth: w, croppedHeight: h,
-        croppedX: Math.round((fullWidth - w) / 2),
-        croppedY: Math.round((fullHeight - h) / 2),
-      };
-    };
-
-    // Honest fallback: show a clean, full-frame flat image (no cropping, no
-    // stretching) plus the panoramic-photo tip and an opt-in 360 button.
-    const showFlatResult = (imageUrl, notice) => {
-      destroyViewer();
-      viewerMount.hidden = true;
-      gyroButton.hidden = true;
-      fullscreenButton.hidden = true;
-      viewerHint.hidden = true;
-      stagePlaceholder.hidden = true;
-      stagePreviewImg.hidden = false;
-      stagePreviewImg.classList.add('is-contain');
-      stagePreviewImg.src = imageUrl;
-      stagePreviewTag.hidden = false;
-      stagePreviewTag.textContent = 'Redesign';
-      resultTitle.textContent = 'Your redesign';
-      panoNoticeText.textContent = notice || 'For best 360° results, upload a complete panoramic photo.';
-      view360Btn.hidden = false;
-      showPanoNotice();
-    };
-
-    const mountViewer = (imageUrl, cropped = false) => {
+    // The viewer ALWAYS receives a normalized, fully-covered 2:1 panorama
+    // (see normalizeToPanorama360), so it is mounted as a full equirectangular
+    // sphere — there is no partial-FOV / flat path that could leave black areas.
+    const mountViewer = (imageUrl) => {
       destroyViewer();
       hidePanoNotice();
       stagePreviewImg.hidden = true;
@@ -1639,8 +1609,6 @@
         moveSpeed: isMobile() ? 0.7 : 1,
         plugins: [[GyroscopePlugin, { touchmove: true, absolutePosition: false, moveMode: 'smooth' }]],
       };
-      // Partial-FOV placement for non-panoramic images (avoids full-sphere stretch).
-      if (cropped) config.panoData = computePanoData;
       viewer = new Viewer(config);
 
       gyroPlugin = viewer.getPlugin(GyroscopePlugin);
